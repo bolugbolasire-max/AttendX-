@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Admin Login | AttendX</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="auth.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+
+      <div class="auth-logo">
+        <h2>🛡️ AttendX</h2>
+        <p>Super Admin Login</p>
+      </div>
+
+      <form id="loginForm">
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" placeholder="Enter your email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+
+        <div id="formMessage" class="form-message"></div>
+
+        <button type="submit" id="loginBtn">Login</button>
+
+      </form>
+
+      <p class="auth-footer">
+        <a href="index.html">&larr; Back to Home</a>
+      </p>
+
+    </div>
+  </div>
+
+  <script type="module" src="super-admin-login.js"></script>
+
+</body>
+</html>
