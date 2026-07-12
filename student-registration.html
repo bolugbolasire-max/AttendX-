@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Registration | AttendX</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="auth.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+
+      <div class="auth-logo">
+        <h2>🎓 AttendX</h2>
+        <p>Student Registration</p>
+      </div>
+
+      <form id="registerForm">
+
+        <div class="form-group">
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" placeholder="e.g. John Doe" required>
+        </div>
+
+        <div class="form-group">
+          <label for="matricNumber">Matric Number</label>
+          <input type="text" id="matricNumber" placeholder="e.g. CSC/2021/045" required>
+        </div>
+
+        <div class="form-group">
+          <label for="department">Department</label>
+          <input type="text" id="department" placeholder="e.g. Computer Science" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" placeholder="e.g. john@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Minimum 6 characters" required minlength="6">
+        </div>
+
+        <div id="formMessage" class="form-message"></div>
+
+        <button type="submit" id="registerBtn">Create Account</button>
+
+      </form>
+
+      <p class="auth-footer">
+        Already have an account? <a href="student-login.html">Login here</a>
+      </p>
+
+      <p class="auth-footer">
+        <a href="index.html">&larr; Back to Home</a>
+      </p>
+
+    </div>
+  </div>
+
+  <script type="module" src="student-registration.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lecturer Dashboard | AttendX</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-content">
+      <h2 class="loading-logo">🎓 AttendX</h2>
+      <p class="loading-text">Loading<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></p>
+    </div>
+  </div>
+
+  <div id="dashboardContent" class="dashboard-wrapper" style="display: none;">
+
+    <!-- ===========================
+         SIDEBAR
+    =========================== -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-text">
+          <h2>🎓 AttendX</h2>
+          <p>Lecturer Panel</p>
+        </div>
+        <button id="themeToggleDash">🌙</button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="overview">📊 Overview</a>
+        <a href="#" class="nav-item" data-section="sessions">🕒 Attendance Sessions</a>
+        <a href="#" class="nav-item" data-section="courses">📚 My Courses</a>
+        <a href="#" class="nav-item" data-section="reports">📁 Reports</a>
+      </nav>
+
+      <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
+    </aside>
+
+    <!-- ===========================
+         MAIN CONTENT
+    =========================== -->
+    <main class="main-content">
+
+      <header class="dashboard-header">
+        <div>
+          <h1 id="welcomeMessage">Welcome, Lecturer</h1>
+          <p id="departmentLine" class="header-subtext"></p>
+        </div>
+        <div class="header-user">
+          <span id="userEmail"></span>
+        </div>
+      </header>
+
+      <!-- OVERVIEW SECTION -->
+      <section id="overview" class="dashboard-section active">
+        <h2>Overview</h2>
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon">📚</div>
+            <div class="stat-card-body">
+              <h3 id="courseCount">0</h3>
+              <p>Courses</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">🕒</div>
+            <div class="stat-card-body">
+              <h3 id="sessionCount">0</h3>
+              <p>Sessions Created</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon amber">✅</div>
+            <div class="stat-card-body">
+              <h3 id="totalAttendance">0</h3>
+              <p>Total Check-ins</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SESSIONS SECTION -->
+      <section id="sessions" class="dashboard-section">
+        <h2>Attendance Sessions</h2>
+
+        <div id="sessionFormCard" class="session-card">
+          <h3>Start a New Session</h3>
+
+          <div class="form-group">
+            <label for="courseSelect">Course</label>
+            <select id="courseSelect">
+              <option value="">Loading courses...</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="otherCourseGroup" style="display: none;">
+            <label for="otherCourseInput">Enter Course Name</label>
+            <input type="text" id="otherCourseInput" placeholder="e.g. Advanced Algorithms">
+          </div>
+
+          <div id="sessionFormMessage" class="form-message"></div>
+
+          <button id="startSessionBtn" type="button">📍 Start Session (captures GPS)</button>
+        </div>
+
+        <div id="activeSessionCard" class="session-card" style="display: none;">
+          <h3>🟢 Session Active</h3>
+          <p id="activeCourseText" class="active-course-text"></p>
+          <p class="gps-note">✅ GPS location captured and locked to this session.</p>
+
+          <div id="qrCodeContainer" class="qr-container"></div>
+
+          <p class="session-id-text">Session ID: <span id="sessionIdText"></span></p>
+
+          <button id="endSessionBtn" type="button" class="end-session-btn">🔴 End Session</button>
+        </div>
+
+        <div class="session-card">
+          <h3>📋 Session History</h3>
+          <div id="sessionHistoryList" class="session-history-list">
+            <p class="placeholder-text">Loading sessions...</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- COURSES SECTION -->
+      <section id="courses" class="dashboard-section">
+        <h2>My Courses</h2>
+
+        <div class="session-card">
+          <h3>📚 Available Courses</h3>
+          <div id="courseListDisplay" class="session-history-list">
+            <p class="placeholder-text">Loading courses...</p>
+          </div>
+        </div>
+
+        <div class="session-card">
+          <h3>➕ Request a New Course</h3>
+          <p class="request-hint">Can't find your course above? Request it and your School Admin will review it.</p>
+
+          <div class="form-group">
+            <label for="requestCourseName">Course Name</label>
+            <input type="text" id="requestCourseName" placeholder="e.g. Advanced Algorithms">
+          </div>
+
+          <div class="form-group">
+            <label for="requestCourseCode">Course Code (optional)</label>
+            <input type="text" id="requestCourseCode" placeholder="e.g. CSC401">
+          </div>
+
+          <div id="courseRequestMessage" class="form-message"></div>
+
+          <button id="submitCourseRequestBtn" type="button">Submit Request</button>
+        </div>
+
+        <div class="session-card">
+          <h3>🕓 My Course Requests</h3>
+          <div id="courseRequestList" class="session-history-list">
+            <p class="placeholder-text">No requests yet.</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- REPORTS SECTION -->
+      <section id="reports" class="dashboard-section">
+        <h2>Reports</h2>
+
+        <div class="session-card">
+          <h3>📁 Attendance Report</h3>
+
+          <div class="form-group">
+            <label for="reportSessionSelect">Select a Session</label>
+            <select id="reportSessionSelect">
+              <option value="">Loading sessions...</option>
+            </select>
+          </div>
+
+          <div id="reportMessage" class="form-message"></div>
+
+          <button id="exportCsvBtn" type="button">⬇️ Export as CSV</button>
+        </div>
+
+        <div class="session-card">
+          <h3>👥 Attendees</h3>
+          <div id="attendeeTableContainer">
+            <p class="placeholder-text">Select a session above to view attendees.</p>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="dashboard-theme.js"></script>
+  <script type="module" src="lecturer-dashboard.js"></script>
+
+</body>
+</html>

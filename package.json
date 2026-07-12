@@ -1,0 +1,24 @@
+{
+  "name": "attendx-",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bolugbolasire-max/AttendX-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bolugbolasire-max/AttendX-/issues"
+  },
+  "homepage": "https://github.com/bolugbolasire-max/AttendX-#readme",
+  "dependencies": {
+    "firebase": "^12.16.0"
+  }
+}
