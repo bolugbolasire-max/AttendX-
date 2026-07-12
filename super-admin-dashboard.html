@@ -4,48 +4,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Super Admin Login | AttendX</title>
+  <title>Super Admin Dashboard | AttendX</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="auth.css">
+  <link rel="stylesheet" href="dashboard.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
 
-  <div class="auth-wrapper">
-    <div class="auth-card">
-
-      <div class="auth-logo">
-        <h2>🛡️ AttendX</h2>
-        <p>Super Admin Login</p>
-      </div>
-
-      <form id="loginForm">
-
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" placeholder="Enter your email" required>
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" placeholder="Enter your password" required>
-        </div>
-
-        <div id="formMessage" class="form-message"></div>
-
-        <button type="submit" id="loginBtn">Login</button>
-
-      </form>
-
-      <p class="auth-footer">
-        <a href="index.html">&larr; Back to Home</a>
-      </p>
-
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-content">
+      <h2 class="loading-logo">🎓 AttendX</h2>
+      <p class="loading-text">Loading<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></p>
     </div>
   </div>
 
-  <script type="module" src="super-admin-login.js"></script>
+  <div id="dashboardContent" class="dashboard-wrapper" style="display: none;">
+
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-text">
+          <h2>🛡️ AttendX</h2>
+          <p>Super Admin</p>
+        </div>
+        <button id="themeToggleDash">🌙</button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="overview">📊 Overview</a>
+        <a href="#" class="nav-item" data-section="schools">🏫 Schools</a>
+      </nav>
+
+      <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
+    </aside>
+
+    <main class="main-content">
+
+      <header class="dashboard-header">
+        <div>
+          <h1 id="welcomeMessage">Welcome, Super Admin</h1>
+        </div>
+        <div class="header-user">
+          <span id="userEmail"></span>
+        </div>
+      </header>
+
+      <!-- OVERVIEW -->
+      <section id="overview" class="dashboard-section active">
+        <h2>Overview</h2>
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon">🏫</div>
+            <div class="stat-card-body">
+              <h3 id="schoolCount">0</h3>
+              <p>Schools</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">✅</div>
+            <div class="stat-card-body">
+              <h3 id="activeSchoolCount">0</h3>
+              <p>Active Schools</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon amber">👤</div>
+            <div class="stat-card-body">
+              <h3 id="adminCount">0</h3>
+              <p>School Admins</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCHOOLS -->
+      <section id="schools" class="dashboard-section">
+        <h2>Schools</h2>
+
+        <div class="session-card">
+          <h3>➕ Add New School</h3>
+
+          <div class="form-group">
+            <label for="schoolNameInput">School Name</label>
+            <input type="text" id="schoolNameInput" placeholder="e.g. Federal University of Technology">
+          </div>
+
+          <div class="form-group">
+            <label for="schoolStatusSelect">Status</label>
+            <select id="schoolStatusSelect">
+              <option value="active">Active</option>
+              <option value="trial">Trial</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+
+          <div id="schoolFormMessage" class="form-message"></div>
+
+          <button id="addSchoolBtn" type="button">Add School</button>
+        </div>
+
+        <div class="session-card">
+          <h3>👤 Create School Admin</h3>
+
+          <div class="form-group">
+            <label for="adminFullName">Full Name</label>
+            <input type="text" id="adminFullName" placeholder="e.g. Jane Doe">
+          </div>
+
+          <div class="form-group">
+            <label for="adminEmail">Email Address</label>
+            <input type="email" id="adminEmail" placeholder="e.g. admin@school.edu">
+          </div>
+
+          <div class="form-group">
+            <label for="adminPassword">Temporary Password</label>
+            <input type="text" id="adminPassword" placeholder="Give this to the admin securely">
+          </div>
+
+          <div class="form-group">
+            <label for="adminSchoolSelect">Assign to School</label>
+            <select id="adminSchoolSelect">
+              <option value="">Loading schools...</option>
+            </select>
+          </div>
+
+          <div id="adminFormMessage" class="form-message"></div>
+
+          <button id="createAdminBtn" type="button">Create School Admin</button>
+        </div>
+
+        <div class="session-card">
+          <h3>📋 All Schools</h3>
+          <div id="schoolsList" class="session-history-list">
+            <p class="placeholder-text">Loading schools...</p>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <script src="dashboard-theme.js"></script>
+  <script type="module" src="super-admin-dashboard.js"></script>
 
 </body>
 </html>
