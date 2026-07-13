@@ -15,6 +15,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
+  deleteDoc,
   collection,
   getDocs,
   query,
@@ -173,23 +175,70 @@ async function loadSchools() {
 
     snapshot.forEach((docSnap) => {
       const school = docSnap.data();
+      const schoolId = docSnap.id;
 
       listHTML += `
-        <div class="history-item">
+        <div class="history-item school-row" data-school-id="${schoolId}">
           <div class="history-item-info">
             <h4>${school.schoolName}</h4>
           </div>
-          <span class="history-badge ${school.status === 'active' ? 'active' : school.status === 'suspended' ? 'rejected' : 'pending'}">${school.status}</span>
+          <div class="school-row-actions">
+            <select class="school-status-select" data-school-id="${schoolId}">
+              <option value="active" ${school.status === 'active' ? 'selected' : ''}>Active</option>
+              <option value="trial" ${school.status === 'trial' ? 'selected' : ''}>Trial</option>
+              <option value="suspended" ${school.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+            </select>
+            <button class="delete-school-btn" data-school-id="${schoolId}" data-school-name="${school.schoolName}" type="button">🗑️</button>
+          </div>
         </div>
       `;
 
       const option = document.createElement("option");
-      option.value = docSnap.id;
+      option.value = schoolId;
       option.textContent = school.schoolName;
       adminSchoolSelect.appendChild(option);
     });
 
     schoolsList.innerHTML = listHTML;
+
+    // Wire up the status dropdown for each school row
+    document.querySelectorAll(".school-status-select").forEach((select) => {
+      select.addEventListener("change", async () => {
+        const schoolId = select.getAttribute("data-school-id");
+        const newStatus = select.value;
+
+        try {
+          await updateDoc(doc(db, "schools", schoolId), { status: newStatus });
+          loadStats();
+        } catch (error) {
+          console.error("Error updating school status:", error);
+          alert("Could not update status. Please try again.");
+        }
+      });
+    });
+
+    // Wire up the delete button for each school row
+    document.querySelectorAll(".delete-school-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const schoolId = btn.getAttribute("data-school-id");
+        const schoolName = btn.getAttribute("data-school-name");
+
+        const confirmed = confirm(
+          `Delete "${schoolName}"? This cannot be undone. Lecturers, students, and school admins already linked to this school will keep their accounts but lose their school connection.`
+        );
+
+        if (!confirmed) return;
+
+        try {
+          await deleteDoc(doc(db, "schools", schoolId));
+          loadSchools();
+          loadStats();
+        } catch (error) {
+          console.error("Error deleting school:", error);
+          alert("Could not delete school. Please try again.");
+        }
+      });
+    });
 
   } catch (error) {
     console.error("Error loading schools:", error);

@@ -467,6 +467,40 @@
 }
 
 /* ==========================
+   SCHOOL ROW ACTIONS
+========================== */
+.school-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.school-status-select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: inherit;
+}
+
+.delete-school-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.delete-school-btn:hover {
+  background: rgba(225, 29, 72, 0.1);
+  border-color: #e11d48;
+}
+
+/* ==========================
    ATTENDEE TABLE
 ========================== */
 .attendee-table {
