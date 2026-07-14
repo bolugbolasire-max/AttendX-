@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard | AttendX</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="ai-chat-widget.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-content">
+      <h2 class="loading-logo">🎓 AttendX</h2>
+      <p class="loading-text">Loading<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></p>
+    </div>
+  </div>
+
+  <div id="dashboardContent" class="dashboard-wrapper" style="display: none;">
+
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-text">
+          <h2>🎓 AttendX</h2>
+          <p>Student Panel</p>
+        </div>
+        <button id="themeToggleDash">🌙</button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="overview">📊 Overview</a>
+        <a href="#" class="nav-item" data-section="checkin">📷 Check In</a>
+        <a href="#" class="nav-item" data-section="history">🕒 Attendance History</a>
+      </nav>
+
+      <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
+    </aside>
+
+    <main class="main-content">
+
+      <header class="dashboard-header">
+        <div>
+          <h1 id="welcomeMessage">Welcome, Student</h1>
+          <p id="schoolLine" class="header-subtext"></p>
+        </div>
+        <div class="header-user">
+          <span id="userEmail"></span>
+        </div>
+      </header>
+
+      <!-- OVERVIEW -->
+      <section id="overview" class="dashboard-section active">
+        <h2>Overview</h2>
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon green">✅</div>
+            <div class="stat-card-body">
+              <h3 id="totalCheckIns">0</h3>
+              <p>Sessions Attended</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHECK IN -->
+      <section id="checkin" class="dashboard-section">
+        <h2>Check In</h2>
+
+        <div class="session-card" style="max-width: 480px;">
+          <h3>📷 Scan Session QR Code</h3>
+          <p class="request-hint">
+            Point your camera at the QR code your lecturer is displaying.
+            Your location will be checked before you're marked present.
+          </p>
+
+          <div id="qrReaderContainer" style="display: none;">
+            <div id="qrReader" style="width: 100%; border-radius: 10px; overflow: hidden;"></div>
+          </div>
+
+          <div id="checkinMessage" class="form-message"></div>
+
+          <button id="startScanBtn" type="button">📷 Start Scanning</button>
+          <button id="stopScanBtn" type="button" style="display: none; background: var(--text-light); margin-top: 8px;">Cancel Scan</button>
+        </div>
+
+        <div id="checkinResultCard" class="session-card" style="display: none; max-width: 480px;">
+          <h3 id="checkinResultTitle"></h3>
+          <p id="checkinResultText" style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 16px;"></p>
+          <button id="scanAnotherBtn" type="button">Scan Another Session</button>
+        </div>
+
+      </section>
+
+      <!-- HISTORY -->
+      <section id="history" class="dashboard-section">
+        <h2>Attendance History</h2>
+
+        <div class="session-card">
+          <h3>🕒 My Check-ins</h3>
+          <div id="historyList" class="session-history-list">
+            <p class="placeholder-text">Loading history...</p>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="dashboard-theme.js"></script>
+  <script type="module" src="student-dashboard.js"></script>
+  <script src="ai-chat-widget.js" defer></script>
+
+</body>
+</html>
