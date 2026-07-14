@@ -22,8 +22,13 @@ import {
   query,
   where,
   orderBy,
+  limit,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// Cap on how many rows we render in one go, so a school with a large
+// roster doesn't stall the page or download an oversized payload.
+const LIST_DISPLAY_LIMIT = 300;
 
 const loadingScreen = document.getElementById("loadingScreen");
 const dashboardContent = document.getElementById("dashboardContent");
@@ -247,7 +252,7 @@ createLecturerBtn.addEventListener("click", async () => {
     if (error.code === "auth/email-already-in-use") {
       lecturerFormMessage.textContent = "This email is already registered.";
     } else {
-      lecturerFormMessage.textContent = `Error: ${error.message || error}`;
+      lecturerFormMessage.textContent = "Couldn't create this account right now. Please try again.";
     }
     lecturerFormMessage.className = "form-message error";
   }
@@ -410,11 +415,14 @@ uploadCsvBtn.addEventListener("click", async () => {
 async function loadLecturers() {
   if (!currentAdmin) return;
 
+  lecturersList.innerHTML = `<p class="placeholder-text">Loading lecturers...</p>`;
+
   try {
     const lecturersQuery = query(
       collection(db, "users"),
       where("role", "==", "lecturer"),
-      where("schoolId", "==", currentAdmin.schoolId)
+      where("schoolId", "==", currentAdmin.schoolId),
+      limit(LIST_DISPLAY_LIMIT)
     );
     const snapshot = await getDocs(lecturersQuery);
 
@@ -440,7 +448,7 @@ async function loadLecturers() {
 
   } catch (error) {
     console.error("Error loading lecturers:", error);
-    lecturersList.innerHTML = `<p class="placeholder-text">Error: ${error.message || error}</p>`;
+    lecturersList.innerHTML = `<p class="placeholder-text">Couldn't load lecturers right now — check your connection and try refreshing.</p>`;
   }
 }
 
@@ -482,7 +490,7 @@ addCourseBtn.addEventListener("click", async () => {
 
   } catch (error) {
     console.error("Error adding course:", error);
-    courseFormMessage.textContent = `Error: ${error.message || error}`;
+    courseFormMessage.textContent = "Couldn't add this course right now. Please try again.";
     courseFormMessage.className = "form-message error";
   }
 
@@ -496,10 +504,13 @@ addCourseBtn.addEventListener("click", async () => {
 async function loadCourses() {
   if (!currentAdmin) return;
 
+  coursesList.innerHTML = `<p class="placeholder-text">Loading courses...</p>`;
+
   try {
     const coursesQuery = query(
       collection(db, "courses"),
-      where("schoolId", "==", currentAdmin.schoolId)
+      where("schoolId", "==", currentAdmin.schoolId),
+      limit(LIST_DISPLAY_LIMIT)
     );
     const snapshot = await getDocs(coursesQuery);
 
@@ -525,7 +536,7 @@ async function loadCourses() {
 
   } catch (error) {
     console.error("Error loading courses:", error);
-    coursesList.innerHTML = `<p class="placeholder-text">Error: ${error.message || error}</p>`;
+    coursesList.innerHTML = `<p class="placeholder-text">Couldn't load courses right now — check your connection and try refreshing.</p>`;
   }
 }
 
@@ -535,12 +546,15 @@ async function loadCourses() {
 async function loadCourseRequests() {
   if (!currentAdmin) return;
 
+  courseRequestsList.innerHTML = `<p class="placeholder-text">Loading requests...</p>`;
+
   try {
     const requestsQuery = query(
       collection(db, "courseRequests"),
       where("schoolId", "==", currentAdmin.schoolId),
       where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(LIST_DISPLAY_LIMIT)
     );
     const snapshot = await getDocs(requestsQuery);
 
@@ -578,7 +592,7 @@ async function loadCourseRequests() {
 
   } catch (error) {
     console.error("Error loading course requests:", error);
-    courseRequestsList.innerHTML = `<p class="placeholder-text">Error: ${error.message || error}</p>`;
+    courseRequestsList.innerHTML = `<p class="placeholder-text">Couldn't load pending requests right now — check your connection and try refreshing.</p>`;
   }
 }
 

@@ -21,8 +21,13 @@ import {
   getDocs,
   query,
   where,
+  limit,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// Cap on how many rows we render in one go, so a platform with many
+// schools/admins doesn't stall the page or download an oversized payload.
+const LIST_DISPLAY_LIMIT = 300;
 
 const loadingScreen = document.getElementById("loadingScreen");
 const dashboardContent = document.getElementById("dashboardContent");
@@ -149,7 +154,7 @@ addSchoolBtn.addEventListener("click", async () => {
 
   } catch (error) {
     console.error("Error adding school:", error);
-    schoolFormMessage.textContent = `Error: ${error.message || error}`;
+    schoolFormMessage.textContent = "Couldn't add this school right now. Please try again.";
     schoolFormMessage.className = "form-message error";
   }
 
@@ -161,8 +166,11 @@ addSchoolBtn.addEventListener("click", async () => {
 // LOAD SCHOOLS (list + dropdown for admin assignment)
 // ==========================
 async function loadSchools() {
+  schoolsList.innerHTML = `<p class="placeholder-text">Loading schools...</p>`;
+
   try {
-    const snapshot = await getDocs(collection(db, "schools"));
+    const schoolsQuery = query(collection(db, "schools"), limit(LIST_DISPLAY_LIMIT));
+    const snapshot = await getDocs(schoolsQuery);
 
     if (snapshot.empty) {
       schoolsList.innerHTML = `<p class="placeholder-text">No schools added yet.</p>`;
@@ -240,7 +248,7 @@ async function loadSchools() {
 
   } catch (error) {
     console.error("Error loading schools:", error);
-    schoolsList.innerHTML = `<p class="placeholder-text">Error: ${error.message || error}</p>`;
+    schoolsList.innerHTML = `<p class="placeholder-text">Couldn't load schools right now — check your connection and try refreshing.</p>`;
   }
 }
 
@@ -305,7 +313,7 @@ createAdminBtn.addEventListener("click", async () => {
     if (error.code === "auth/email-already-in-use") {
       adminFormMessage.textContent = "This email is already registered.";
     } else {
-      adminFormMessage.textContent = `Error: ${error.message || error}`;
+      adminFormMessage.textContent = "Couldn't create this account right now. Please try again.";
     }
     adminFormMessage.className = "form-message error";
   }

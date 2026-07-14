@@ -1,7 +1,9 @@
 // student-login.js
 import { auth, db } from "./firebase-config.js";
 import {
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   doc,
@@ -12,9 +14,37 @@ const loginForm = document.getElementById("loginForm");
 const loginBtn = document.getElementById("loginBtn");
 const formMessage = document.getElementById("formMessage");
 
+// Kept so a "resend verification email" link can re-send without asking
+// the student to type their password again.
+let pendingUnverifiedUser = null;
+
 function showMessage(text, type) {
   formMessage.textContent = text;
   formMessage.className = `form-message ${type}`;
+}
+
+function showUnverifiedMessage() {
+  formMessage.innerHTML =
+    'Please verify your email before logging in. Check your inbox (and spam/junk folder) for the link, or ' +
+    '<a href="#" id="resendVerificationLink">resend the verification email</a>.';
+  formMessage.className = "form-message error";
+
+  const resendLink = document.getElementById("resendVerificationLink");
+  if (resendLink) {
+    resendLink.addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (!pendingUnverifiedUser) return;
+
+      resendLink.textContent = "Sending...";
+      try {
+        await sendEmailVerification(pendingUnverifiedUser);
+        resendLink.textContent = "Sent! Check your inbox.";
+      } catch (error) {
+        console.error("Error resending verification email:", error);
+        resendLink.textContent = "Could not resend — try again shortly.";
+      }
+    });
+  }
 }
 
 loginForm.addEventListener("submit", async (e) => {
@@ -30,6 +60,17 @@ loginForm.addEventListener("submit", async (e) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+
+    // Block unverified students from proceeding. We sign them back out
+    // immediately so no dashboard-eligible session is left active.
+    if (!user.emailVerified) {
+      pendingUnverifiedUser = user;
+      await signOut(auth);
+      showUnverifiedMessage();
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Login";
+      return;
+    }
 
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);

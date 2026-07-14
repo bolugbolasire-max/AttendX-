@@ -28,11 +28,9 @@ loginForm.addEventListener("submit", async (e) => {
   loginBtn.textContent = "Logging in...";
 
   try {
-    // 1. Sign in with Firebase Auth
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // 2. Look up their profile in Firestore to check the role
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
@@ -52,7 +50,6 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
 
-    // 3. Success — role matches, redirect to lecturer dashboard
     showMessage("Login successful! Redirecting...", "success");
 
     setTimeout(() => {

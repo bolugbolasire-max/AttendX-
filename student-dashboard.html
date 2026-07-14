@@ -70,7 +70,27 @@
       <section id="checkin" class="dashboard-section">
         <h2>Check In</h2>
 
-        <div class="session-card" style="max-width: 480px;">
+        <div id="faceStepCard" class="session-card" style="max-width: 480px;">
+          <h3>😊 Face Verification</h3>
+          <p class="request-hint">
+            First, we'll confirm your face is visible to the camera. This helps prevent
+            someone else checking in on your behalf. Your photo is stored with this
+            check-in only — it isn't used for facial identity matching.
+          </p>
+
+          <div id="faceCameraContainer" style="display: none;">
+            <video id="faceVideo" autoplay playsinline muted style="width: 100%; border-radius: 10px; background: #000;"></video>
+            <canvas id="faceCanvas" style="display: none;"></canvas>
+          </div>
+
+          <div id="faceMessage" class="form-message"></div>
+
+          <button id="startFaceBtn" type="button">😊 Verify My Face</button>
+          <button id="captureFaceBtn" type="button" style="display: none;">📸 Capture</button>
+          <button id="retakeFaceBtn" type="button" style="display: none; background: var(--text-light);">Retake</button>
+        </div>
+
+        <div id="scanStepCard" class="session-card" style="max-width: 480px; display: none;">
           <h3>📷 Scan Session QR Code</h3>
           <p class="request-hint">
             Point your camera at the QR code your lecturer is displaying.
@@ -112,6 +132,7 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
   <script src="dashboard-theme.js"></script>
   <script type="module" src="student-dashboard.js"></script>
   <script src="ai-chat-widget.js" defer></script>

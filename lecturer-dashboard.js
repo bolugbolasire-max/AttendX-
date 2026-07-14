@@ -14,8 +14,14 @@ import {
   query,
   where,
   orderBy,
+  limit,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// Cap on how many attendee/history rows we render in one go. Keeps a
+// session with a large class (e.g. 200 students) from stalling the page
+// or downloading an oversized payload just to show a list.
+const LIST_DISPLAY_LIMIT = 300;
 
 const loadingScreen = document.getElementById("loadingScreen");
 const dashboardContent = document.getElementById("dashboardContent");
@@ -202,11 +208,10 @@ reportSessionSelect.addEventListener("change", async () => {
   attendeeTableContainer.innerHTML = `<p class="placeholder-text">Loading attendees...</p>`;
 
   try {
-    // Attendance check-ins will live in a "checkIns" collection once student
-    // scanning is built. For now this will simply come back empty.
     const checkInsQuery = query(
       collection(db, "checkIns"),
-      where("sessionId", "==", sessionId)
+      where("sessionId", "==", sessionId),
+      limit(LIST_DISPLAY_LIMIT)
     );
 
     const snapshot = await getDocs(checkInsQuery);
@@ -244,11 +249,16 @@ reportSessionSelect.addEventListener("change", async () => {
     });
 
     tableHTML += `</tbody></table>`;
+
+    if (snapshot.size >= LIST_DISPLAY_LIMIT) {
+      tableHTML += `<p class="placeholder-text">Showing the first ${LIST_DISPLAY_LIMIT} attendees. Export to CSV to see everyone.</p>`;
+    }
+
     attendeeTableContainer.innerHTML = tableHTML;
 
   } catch (error) {
     console.error("Error loading attendees:", error);
-    attendeeTableContainer.innerHTML = `<p class="placeholder-text">Error: ${error.message || error}</p>`;
+    attendeeTableContainer.innerHTML = `<p class="placeholder-text">Couldn't load attendees right now — check your connection and reselect the session.</p>`;
   }
 });
 
@@ -305,7 +315,7 @@ exportCsvBtn.addEventListener("click", async () => {
 
   } catch (error) {
     console.error("Error exporting CSV:", error);
-    reportMessage.textContent = `Error: ${error.message || error}`;
+    reportMessage.textContent = "Couldn't export this session right now. Please try again.";
     reportMessage.className = "form-message error";
   }
 });
@@ -344,7 +354,7 @@ async function loadCourseListDisplay() {
 
   } catch (error) {
     console.error("Error loading course list:", error);
-    courseListDisplay.innerHTML = `<p class="placeholder-text">Error: ${error.message || error}</p>`;
+    courseListDisplay.innerHTML = `<p class="placeholder-text">Couldn't load courses right now — check your connection and try refreshing.</p>`;
   }
 }
 
@@ -392,7 +402,7 @@ submitCourseRequestBtn.addEventListener("click", async () => {
 
   } catch (error) {
     console.error("Error submitting course request:", error);
-    courseRequestMessage.textContent = `Error: ${error.message || error}`;
+    courseRequestMessage.textContent = "Couldn't submit your request right now. Please try again.";
     courseRequestMessage.className = "form-message error";
   }
 
@@ -440,7 +450,7 @@ async function loadMyCourseRequests() {
 
   } catch (error) {
     console.error("Error loading course requests:", error);
-    courseRequestList.innerHTML = `<p class="placeholder-text">Error: ${error.message || error}</p>`;
+    courseRequestList.innerHTML = `<p class="placeholder-text">Couldn't load your requests right now — check your connection and try refreshing.</p>`;
   }
 }
 
@@ -450,11 +460,14 @@ async function loadMyCourseRequests() {
 async function loadSessionHistory() {
   if (!currentLecturer) return;
 
+  sessionHistoryList.innerHTML = `<p class="placeholder-text">Loading sessions...</p>`;
+
   try {
     const sessionsQuery = query(
       collection(db, "sessions"),
       where("lecturerUid", "==", currentLecturer.uid),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(LIST_DISPLAY_LIMIT)
     );
 
     const snapshot = await getDocs(sessionsQuery);
@@ -499,7 +512,7 @@ async function loadSessionHistory() {
 
   } catch (error) {
     console.error("Error loading session history:", error);
-    sessionHistoryList.innerHTML = `<p class="placeholder-text">Error: ${error.message || error}</p>`;
+    sessionHistoryList.innerHTML = `<p class="placeholder-text">Couldn't load your sessions right now — check your connection and try refreshing.</p>`;
   }
 }
 
@@ -662,14 +675,12 @@ startSessionBtn.addEventListener("click", async () => {
   } catch (error) {
     console.error("Error starting session:", error);
 
-    // TEMPORARY: show the full error detail on screen for debugging
-    let debugMsg = `Error: ${error.message || error}`;
-    if (error.code) debugMsg += ` (code: ${error.code})`;
-
     if (error.code === 1) {
       sessionFormMessage.textContent = "Location permission denied. GPS is required to start a session.";
+    } else if (error.code === 2 || error.code === 3) {
+      sessionFormMessage.textContent = "Couldn't get your location. Please check your device's location settings and try again.";
     } else {
-      sessionFormMessage.textContent = debugMsg;
+      sessionFormMessage.textContent = "Something went wrong starting the session. Please try again.";
     }
     sessionFormMessage.className = "form-message error";
 

@@ -1,7 +1,9 @@
 // student-registration.js
 import { auth, db } from "./firebase-config.js";
 import {
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   doc,
@@ -71,8 +73,23 @@ registerForm.addEventListener("submit", async (e) => {
 
   showMessage("", "");
 
+  // Explicit guard for all required fields — the `required` HTML
+  // attributes should stop empty submissions, but this is a backstop
+  // in case that validation gets bypassed (autofill quirks, browser
+  // differences, programmatic submits, etc). Without this, a blank
+  // email could reach Firebase and produce a confusing result.
+  if (!fullName || !matricNumber || !department || !email || !password) {
+    showMessage("Please fill in all fields before submitting.", "error");
+    return;
+  }
+
   if (!schoolId) {
     showMessage("Please select your school.", "error");
+    return;
+  }
+
+  if (password.length < 6) {
+    showMessage("Password should be at least 6 characters.", "error");
     return;
   }
 
@@ -96,11 +113,30 @@ registerForm.addEventListener("submit", async (e) => {
       createdAt: serverTimestamp()
     });
 
-    showMessage("Account created! Redirecting to login...", "success");
+    // 3. Send a verification email — students must confirm their address
+    // before they're allowed to log in (see student-login.js).
+    try {
+      await sendEmailVerification(user);
+    } catch (verifyError) {
+      // Account + profile were still created successfully; verification
+      // email sending is a secondary step, so don't block on it — but
+      // do log it in case it needs investigating.
+      console.error("Error sending verification email:", verifyError);
+    }
+
+    // 4. Sign the new user back out immediately. They're not allowed to
+    // use the dashboard until they've verified their email, so there's
+    // no reason to leave an active (unverified) session live.
+    await signOut(auth);
+
+    showMessage(
+      "Account created! We've sent a verification link to your email — please verify before logging in. Check your spam/junk folder if you don't see it within a few minutes.",
+      "success"
+    );
 
     setTimeout(() => {
       window.location.href = "student-login.html";
-    }, 1500);
+    }, 2200);
 
   } catch (error) {
     console.error(error);
