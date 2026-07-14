@@ -91,11 +91,22 @@ onAuthStateChanged(auth, async (user) => {
     departmentLine.textContent = userData.department || "";
     userEmail.textContent = userData.email || user.email;
 
+    if (!userData.schoolId) {
+      // Lecturer accounts should always be created by a School Admin, which
+      // stamps schoolId onto the profile. If it's missing, something's off.
+      welcomeMessage.textContent = "No school assigned to this account. Contact your school admin.";
+      loadingScreen.style.display = "none";
+      dashboardContent.style.display = "flex";
+      return;
+    }
+
     // Save lecturer info for use in session creation later
     currentLecturer = {
       uid: user.uid,
       fullName: userData.fullName || "Lecturer",
-      department: userData.department || ""
+      department: userData.department || "",
+      schoolId: userData.schoolId,
+      schoolName: userData.schoolName || ""
     };
 
     // Reveal the dashboard, hide the loading screen
@@ -303,8 +314,13 @@ exportCsvBtn.addEventListener("click", async () => {
 // DISPLAY COURSE LIST (My Courses tab)
 // ==========================
 async function loadCourseListDisplay() {
+  if (!currentLecturer) return;
   try {
-    const coursesSnapshot = await getDocs(collection(db, "courses"));
+    const coursesQuery = query(
+      collection(db, "courses"),
+      where("schoolId", "==", currentLecturer.schoolId)
+    );
+    const coursesSnapshot = await getDocs(coursesQuery);
 
     if (coursesSnapshot.empty) {
       courseListDisplay.innerHTML = `<p class="placeholder-text">No courses available yet.</p>`;
@@ -359,6 +375,7 @@ submitCourseRequestBtn.addEventListener("click", async () => {
       courseName,
       courseCode,
       department: currentLecturer.department,
+      schoolId: currentLecturer.schoolId,
       requestedBy: currentLecturer.uid,
       requestedByName: currentLecturer.fullName,
       status: "pending",
@@ -488,8 +505,13 @@ async function loadSessionHistory() {
 
 // Update the course count stat too, once courses are loaded
 async function updateCourseCount() {
+  if (!currentLecturer) return;
   try {
-    const coursesSnapshot = await getDocs(collection(db, "courses"));
+    const coursesQuery = query(
+      collection(db, "courses"),
+      where("schoolId", "==", currentLecturer.schoolId)
+    );
+    const coursesSnapshot = await getDocs(coursesQuery);
     courseCountEl.textContent = coursesSnapshot.size.toString();
   } catch (error) {
     console.error("Error counting courses:", error);
@@ -500,8 +522,14 @@ async function updateCourseCount() {
 // LOAD COURSES INTO DROPDOWN
 // ==========================
 async function loadCourses() {
+  if (!currentLecturer) return;
+
   try {
-    const coursesSnapshot = await getDocs(collection(db, "courses"));
+    const coursesQuery = query(
+      collection(db, "courses"),
+      where("schoolId", "==", currentLecturer.schoolId)
+    );
+    const coursesSnapshot = await getDocs(coursesQuery);
 
     courseSelect.innerHTML = ""; // clear "Loading courses..."
 
@@ -603,6 +631,7 @@ startSessionBtn.addEventListener("click", async () => {
       lecturerUid: currentLecturer.uid,
       lecturerName: currentLecturer.fullName,
       department: currentLecturer.department,
+      schoolId: currentLecturer.schoolId,
       latitude: location.latitude,
       longitude: location.longitude,
       gpsAccuracy: location.accuracy,

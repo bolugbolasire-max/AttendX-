@@ -201,7 +201,6 @@ async function loadSchools() {
 
     schoolsList.innerHTML = listHTML;
 
-    // Wire up the status dropdown for each school row
     document.querySelectorAll(".school-status-select").forEach((select) => {
       select.addEventListener("change", async () => {
         const schoolId = select.getAttribute("data-school-id");
@@ -217,7 +216,6 @@ async function loadSchools() {
       });
     });
 
-    // Wire up the delete button for each school row
     document.querySelectorAll(".delete-school-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const schoolId = btn.getAttribute("data-school-id");
@@ -249,10 +247,6 @@ async function loadSchools() {
 // ==========================
 // CREATE SCHOOL ADMIN ACCOUNT
 // ==========================
-// We use a SEPARATE, temporary Firebase app instance for this. Creating a
-// user normally signs Firebase Auth in as that new user in the current
-// session, which would kick the Super Admin out. A secondary app instance
-// keeps the Super Admin's own session untouched.
 createAdminBtn.addEventListener("click", async () => {
   const fullName = adminFullName.value.trim();
   const email = adminEmail.value.trim();
@@ -274,13 +268,10 @@ createAdminBtn.addEventListener("click", async () => {
   createAdminBtn.disabled = true;
   createAdminBtn.textContent = "Creating...";
 
-  // Get the school name for storing alongside the schoolId
   const schoolName = adminSchoolSelect.options[adminSchoolSelect.selectedIndex].textContent;
 
   let secondaryApp;
   try {
-    // Create a temporary secondary app instance so this doesn't disturb
-    // the Super Admin's own logged-in session.
     secondaryApp = initializeApp(auth.app.options, "secondary-" + Date.now());
     const secondaryAuth = getAuth(secondaryApp);
 
@@ -296,7 +287,6 @@ createAdminBtn.addEventListener("click", async () => {
       createdAt: serverTimestamp()
     });
 
-    // Sign out of the secondary instance (doesn't affect the main session)
     await signOut(secondaryAuth);
 
     adminFormMessage.textContent = "School Admin account created successfully.";

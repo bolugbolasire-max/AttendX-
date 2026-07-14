@@ -494,6 +494,28 @@ nav ul li a:hover {
   background: var(--primary-dark);
 }
 
+#contactForm button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ==========================
+   CONTACT FORM MESSAGE (success/error feedback)
+========================== */
+.contact .form-message {
+  font-size: 0.85rem;
+  min-height: 18px;
+  text-align: center;
+}
+
+.contact .form-message.error {
+  color: #e11d48;
+}
+
+.contact .form-message.success {
+  color: #16a34a;
+}
+
 /* ==========================
    FOOTER
 ========================== */

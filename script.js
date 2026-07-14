@@ -92,16 +92,62 @@ document.querySelectorAll('nav ul a[href^="#"]').forEach((link) => {
 });
 
 // ==========================
-// CONTACT FORM (placeholder handler)
+// CONTACT FORM (EmailJS)
 // ==========================
-const contactForm = document.getElementById('contactForm');
+// Sends the form directly to your inbox via EmailJS — no backend needed.
+// Public key is safe to expose in client-side code (that's how EmailJS
+// is designed to work); it is NOT a secret like an API private key.
+(function () {
+  const EMAILJS_PUBLIC_KEY = "RXL1cXvWmv3NC0fuH";
+  const EMAILJS_SERVICE_ID = "service_q648zvm";
+  const EMAILJS_TEMPLATE_ID = "template_kdwk9xy";
 
-if (contactForm) {
-  contactForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    // TODO: Replace this with a real submission (e.g. Firebase Firestore
-    // write, or an email service) once the backend is wired up.
-    alert('Thanks for reaching out! We will get back to you shortly.');
-    contactForm.reset();
-  });
-}
+  if (window.emailjs) {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+  }
+
+  const contactForm = document.getElementById('contactForm');
+  const contactSubmitBtn = document.getElementById('contactSubmitBtn');
+  const contactFormMessage = document.getElementById('contactFormMessage');
+
+  function showContactMessage(text, type) {
+    if (!contactFormMessage) return;
+    contactFormMessage.textContent = text;
+    contactFormMessage.className = `form-message ${type}`;
+  }
+
+  if (contactForm) {
+    contactForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      if (!window.emailjs) {
+        showContactMessage("Could not connect to the mail service. Please try again shortly.", "error");
+        return;
+      }
+
+      showContactMessage("", "");
+      contactSubmitBtn.disabled = true;
+      contactSubmitBtn.textContent = "Sending...";
+
+      const templateParams = {
+        name: document.getElementById('contactName').value.trim(),
+        email: document.getElementById('contactEmail').value.trim(),
+        message: document.getElementById('contactMessage').value.trim()
+      };
+
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+        .then(() => {
+          showContactMessage("Thanks for reaching out! We'll get back to you shortly.", "success");
+          contactForm.reset();
+        })
+        .catch((error) => {
+          console.error("EmailJS error:", error);
+          showContactMessage("Something went wrong sending your message. Please try again.", "error");
+        })
+        .finally(() => {
+          contactSubmitBtn.disabled = false;
+          contactSubmitBtn.textContent = "Send Message";
+        });
+    });
+  }
+})();

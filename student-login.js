@@ -1,4 +1,4 @@
-// lecturer-login.js
+// student-login.js
 import { auth, db } from "./firebase-config.js";
 import {
   signInWithEmailAndPassword
@@ -28,16 +28,14 @@ loginForm.addEventListener("submit", async (e) => {
   loginBtn.textContent = "Logging in...";
 
   try {
-    // 1. Sign in with Firebase Auth
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // 2. Look up their profile in Firestore to check the role
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
-      showMessage("No profile found for this account. Contact your school admin.", "error");
+      showMessage("No profile found for this account.", "error");
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
@@ -45,18 +43,17 @@ loginForm.addEventListener("submit", async (e) => {
 
     const userData = userDocSnap.data();
 
-    if (userData.role !== "lecturer") {
-      showMessage("This account is not registered as a lecturer.", "error");
+    if (userData.role !== "student") {
+      showMessage("This account is not registered as a student.", "error");
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
     }
 
-    // 3. Success — role matches, redirect to lecturer dashboard
     showMessage("Login successful! Redirecting...", "success");
 
     setTimeout(() => {
-      window.location.href = "lecturer-dashboard.html";
+      window.location.href = "student-dashboard.html";
     }, 1200);
 
   } catch (error) {

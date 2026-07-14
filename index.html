@@ -1,16 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 
-  <head>
-    <meta charset="UTF-8">
-    <title>Smart Attendance</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="/style.css">
-  </head>
-
-  <body>
-    <!DOCTYPE html>
-<html lang="en">
-
 <head>
 
 <meta charset="UTF-8">
@@ -24,8 +14,11 @@ content="width=device-width, initial-scale=1.0">
 content="AttendX is a modern attendance management system that uses QR Code, GPS verification and Facial Recognition for universities.">
 
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="ai-chat-widget.css">
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 </head>
 
@@ -685,19 +678,27 @@ Get in touch with us today.
 
 <input
 type="text"
+id="contactName"
+name="name"
 placeholder="Full Name"
 required>
 
 <input
 type="email"
+id="contactEmail"
+name="email"
 placeholder="Email Address"
 required>
 
 <textarea
+id="contactMessage"
+name="message"
 placeholder="Tell us about your institution..."
 required></textarea>
 
-<button type="submit">
+<div id="contactFormMessage" class="form-message"></div>
+
+<button type="submit" id="contactSubmitBtn">
 
 Send Message
 
@@ -738,11 +739,8 @@ Smart. Secure. Seamless.
 </button>
 
 <script src="script.js"></script>
+<script src="ai-chat-widget.js" defer></script>
 
 </body>
-
-</html>
-    <script src="/script.js"></script>
-  </body>
 
 </html>
