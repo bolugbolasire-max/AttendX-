@@ -136,10 +136,13 @@
   top: 50%;
   right: 4px;
   transform: translateY(-50%);
-  background: none;
+  width: 34px !important;
+  height: 34px;
+  background: none !important;
   border: none;
   cursor: pointer;
-  padding: 8px;
+  padding: 0 !important;
+  margin: 0 !important;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -152,7 +155,7 @@
 .password-toggle-btn:hover {
   opacity: 1;
   color: var(--primary);
-  background: var(--bg-alt);
+  background: var(--bg-alt) !important;
 }
 
 /* ==========================
