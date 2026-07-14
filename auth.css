@@ -147,15 +147,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-light);
-  opacity: 0.85;
+  color: #4b5563;
+  opacity: 1;
   transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.password-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
 }
 
 .password-toggle-btn:hover {
   opacity: 1;
   color: var(--primary);
   background: var(--bg-alt) !important;
+}
+
+.password-toggle-btn:active {
+  color: var(--primary-dark);
 }
 
 /* ==========================
