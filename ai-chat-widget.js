@@ -19,12 +19,12 @@
     {
       id: "what-is-attendx",
       keywords: ["what is attendx", "what is this", "what does attendx do", "about attendx", "what's attendx"],
-      reply: "AttendX is a smart attendance management system for universities. It uses QR Codes, GPS verification and Facial Recognition to replace manual attendance sheets and stop students from signing in for each other."
+      reply: "AttendX is a smart attendance management system for universities. It uses QR Codes, GPS verification and Face Verification to replace manual attendance sheets and stop students from signing in for each other."
     },
     {
       id: "how-it-works",
       keywords: ["how does it work", "how it works", "how does attendx work"],
-      reply: "It's a 4-step flow: 1️⃣ Students and lecturers log into their own portals. 2️⃣ A lecturer starts a session and gets a unique QR code. 3️⃣ Students verify their GPS location and identity, then scan the QR. 4️⃣ Attendance is saved instantly and lecturers/admins can view or export it."
+      reply: "It's a 4-step flow: 1️⃣ Students and lecturers log into their own portals. 2️⃣ A lecturer starts a session and gets a unique QR code. 3️⃣ Students verify their GPS location and face, then scan the QR. 4️⃣ Attendance is saved instantly and lecturers/admins can view or export it."
     },
     {
       id: "gps",
@@ -33,8 +33,8 @@
     },
     {
       id: "face",
-      keywords: ["facial recognition", "face recognition", "face id", "impersonat", "sign for", "buddy"],
-      reply: "😊 Facial Recognition confirms it's really you before your attendance is recorded, so one student can't mark attendance for a friend."
+      keywords: ["facial recognition", "face recognition", "face id", "impersonat", "sign for", "buddy", "face verification"],
+      reply: "😊 Face Verification confirms a live face is present before your attendance is recorded, which helps prevent one student marking attendance for another."
     },
     {
       id: "qr",
@@ -74,7 +74,7 @@
     {
       id: "forgot-password",
       keywords: ["forgot password", "reset password", "can't log in", "cant log in", "locked out"],
-      reply: "No worries — on any login page there's a \"Forgot password?\" link. Enter your email there and we'll send you a reset link."
+      reply: "No worries — on any login page there's a \"Forgot password?\" link. Enter your email there and we'll send you a reset link. If it doesn't arrive within a few minutes, check your spam/junk folder."
     },
     {
       id: "mobile",
@@ -84,7 +84,7 @@
     {
       id: "security",
       keywords: ["secure", "safe", "privacy", "data protection"],
-      reply: "AttendX uses role-based access (Student, Lecturer, School Admin, Super Admin) so everyone only sees what's relevant to them, combined with GPS and facial verification to prevent impersonation."
+      reply: "AttendX uses role-based access (Student, Lecturer, School Admin, Super Admin) so everyone only sees what's relevant to them, combined with GPS and face verification to help prevent impersonation. See our Privacy Policy for details."
     },
     {
       id: "pricing",
@@ -109,7 +109,7 @@
   ];
 
   const FALLBACK_REPLIES = [
-    "I'm not totally sure about that one — but I can tell you about GPS verification, facial recognition, QR attendance, or how to get started. What would help?",
+    "I'm not totally sure about that one — but I can tell you about GPS verification, face verification, QR attendance, or how to get started. What would help?",
     "Hmm, I don't have an answer for that yet. Try asking about how AttendX works, the different portals, or registration."
   ];
 
@@ -155,7 +155,23 @@
     return bestEntry;
   }
 
-  function getReply(userText) {
+  async function getReply(userText) {
+    // Data-aware handlers (registered by dashboard pages via
+    // window.AttendXAI.registerDataHandlers) get first shot, since a
+    // question like "how many students checked in" should hit real data,
+    // not the generic FAQ.
+    if (window.AttendXAI && window.AttendXAI._dataHandlers.length) {
+      for (const handler of window.AttendXAI._dataHandlers) {
+        try {
+          const result = await handler(userText);
+          if (result) return result;
+        } catch (error) {
+          console.error("AI data handler error:", error);
+          // fall through to FAQ / fallback rather than surfacing an error
+        }
+      }
+    }
+
     const match = findBestMatch(userText);
     if (match) return match.reply;
     return FALLBACK_REPLIES[Math.floor(Math.random() * FALLBACK_REPLIES.length)];
@@ -231,7 +247,8 @@
     function addQuickReplies() {
       const wrap = document.createElement("div");
       wrap.className = "ai-quick-replies";
-      QUICK_REPLIES.forEach((qr) => {
+      const replies = (window.AttendXAI && window.AttendXAI._quickReplies) || QUICK_REPLIES;
+      replies.forEach((qr) => {
         const btn = document.createElement("button");
         btn.className = "ai-quick-reply-btn";
         btn.type = "button";
@@ -270,10 +287,10 @@
 
       // Small artificial delay so the typing indicator feels real,
       // rather than answers appearing instantly.
-      const delay = 500 + Math.random() * 500;
-      setTimeout(() => {
+      const delay = 400 + Math.random() * 400;
+      setTimeout(async () => {
+        const reply = await getReply(queryText);
         removeTypingIndicator();
-        const reply = getReply(queryText);
         addMessage(reply, "bot");
         sendBtn.disabled = false;
         inputEl.focus();
@@ -288,7 +305,8 @@
 
       if (!hasOpenedBefore) {
         hasOpenedBefore = true;
-        addMessage(WELCOME_MESSAGE, "bot");
+        const welcome = (window.AttendXAI && window.AttendXAI._welcomeMessage) || WELCOME_MESSAGE;
+        addMessage(welcome, "bot");
         addQuickReplies();
       }
 
@@ -320,6 +338,31 @@
       }
     });
   }
+
+  // ==========================
+  // PUBLIC API — lets dashboard pages register data-aware handlers
+  // without this file needing to know about Firebase directly.
+  // ==========================
+  window.AttendXAI = window.AttendXAI || {
+    _dataHandlers: [],
+    _quickReplies: null,
+    _welcomeMessage: null,
+
+    // handler: async (userText) => string | null
+    // Return a string to answer the question; return null/undefined to
+    // let the next handler (or the FAQ fallback) take a turn.
+    registerDataHandler(handler) {
+      this._dataHandlers.push(handler);
+    },
+
+    setQuickReplies(replies) {
+      this._quickReplies = replies;
+    },
+
+    setWelcomeMessage(text) {
+      this._welcomeMessage = text;
+    }
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initWidget);
