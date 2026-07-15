@@ -18,6 +18,7 @@ import {
   onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { initSessionLock } from "./session-lock.js";
 
 // Cap on how many attendee/history rows we render in one go. Keeps a
 // session with a large class (e.g. 200 students) from stalling the page
@@ -119,6 +120,14 @@ onAuthStateChanged(auth, async (user) => {
     // Reveal the dashboard, hide the loading screen
     loadingScreen.style.display = "none";
     dashboardContent.style.display = "flex";
+
+    // Start the inactivity lock/logout system for this session.
+    initSessionLock({
+      uid: user.uid,
+      email: userData.email || user.email,
+      role: userData.role,
+      loginPage: "lecturer-login.html"
+    });
 
     // Live-watch this lecturer's school for suspension. If a Super Admin
     // suspends the school while the lecturer is actively using the

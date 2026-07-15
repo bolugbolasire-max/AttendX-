@@ -24,6 +24,7 @@ import {
   limit,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { initSessionLock } from "./session-lock.js";
 
 // Cap on how many rows we render in one go, so a platform with many
 // schools/admins doesn't stall the page or download an oversized payload.
@@ -76,6 +77,14 @@ onAuthStateChanged(auth, async (user) => {
 
     loadingScreen.style.display = "none";
     dashboardContent.style.display = "flex";
+
+    // Start the inactivity lock/logout system for this session.
+    initSessionLock({
+      uid: user.uid,
+      email: userData.email || user.email,
+      role: userData.role,
+      loginPage: "super-admin-login.html"
+    });
 
     loadSchools();
     loadStats();

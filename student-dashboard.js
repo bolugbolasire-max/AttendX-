@@ -17,6 +17,7 @@ import {
   onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { initSessionLock } from "./session-lock.js";
 
 // Maximum allowed distance (in meters) between the student and the
 // lecturer's session location for a check-in to be accepted.
@@ -111,6 +112,14 @@ onAuthStateChanged(auth, async (user) => {
 
     loadingScreen.style.display = "none";
     dashboardContent.style.display = "flex";
+
+    // Start the inactivity lock/logout system for this session.
+    initSessionLock({
+      uid: user.uid,
+      email: userData.email || user.email,
+      role: userData.role,
+      loginPage: "student-login.html"
+    });
 
     loadHistory();
 
