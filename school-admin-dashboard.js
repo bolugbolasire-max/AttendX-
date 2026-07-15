@@ -23,6 +23,7 @@ import {
   where,
   orderBy,
   limit,
+  onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
@@ -108,6 +109,19 @@ onAuthStateChanged(auth, async (user) => {
 
     loadingScreen.style.display = "none";
     dashboardContent.style.display = "flex";
+
+    // Live-watch this admin's own school for suspension. If a Super
+    // Admin suspends the school while this admin is actively using the
+    // dashboard, this kicks them out immediately rather than waiting
+    // for their next login.
+    onSnapshot(doc(db, "schools", currentAdmin.schoolId), (schoolSnap) => {
+      if (schoolSnap.exists() && schoolSnap.data().status === "suspended") {
+        alert("Your school's access has been suspended. You will now be logged out.");
+        signOut(auth).then(() => {
+          window.location.href = "school-admin-login.html";
+        });
+      }
+    });
 
     loadLecturers();
     loadCourses();

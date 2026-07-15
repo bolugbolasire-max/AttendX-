@@ -91,6 +91,20 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
 
+    // Block login if the student's school has been suspended by the
+    // Super Admin. We sign them back out so no dashboard-eligible
+    // session is left active.
+    if (userData.schoolId) {
+      const schoolDocSnap = await getDoc(doc(db, "schools", userData.schoolId));
+      if (schoolDocSnap.exists() && schoolDocSnap.data().status === "suspended") {
+        await signOut(auth);
+        showMessage("Your school's access has been suspended. Please contact your School Admin.", "error");
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Login";
+        return;
+      }
+    }
+
     showMessage("Login successful! Redirecting...", "success");
 
     setTimeout(() => {

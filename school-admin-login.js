@@ -1,7 +1,8 @@
 // school-admin-login.js
 import { auth, db } from "./firebase-config.js";
 import {
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   doc,
@@ -48,6 +49,20 @@ loginForm.addEventListener("submit", async (e) => {
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
+    }
+
+    // Block login if this admin's own school has been suspended by the
+    // Super Admin. We sign them back out so no dashboard-eligible
+    // session is left active.
+    if (userData.schoolId) {
+      const schoolDocSnap = await getDoc(doc(db, "schools", userData.schoolId));
+      if (schoolDocSnap.exists() && schoolDocSnap.data().status === "suspended") {
+        await signOut(auth);
+        showMessage("Your school's access has been suspended. Please contact AttendX support.", "error");
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Login";
+        return;
+      }
     }
 
     showMessage("Login successful! Redirecting...", "success");

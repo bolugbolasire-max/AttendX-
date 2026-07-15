@@ -14,6 +14,7 @@ import {
   where,
   orderBy,
   limit,
+  onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
@@ -117,6 +118,21 @@ onAuthStateChanged(auth, async (user) => {
     // dashboard is up, so they're likely ready by the time the student
     // taps "Verify My Face" — avoids a cold-start wait on that tap.
     loadFaceModels();
+
+    // Live-watch this student's school for suspension. If a Super Admin
+    // suspends the school while the student is actively using the
+    // dashboard, this kicks them out immediately rather than waiting
+    // for their next login.
+    if (currentStudent.schoolId) {
+      onSnapshot(doc(db, "schools", currentStudent.schoolId), (schoolSnap) => {
+        if (schoolSnap.exists() && schoolSnap.data().status === "suspended") {
+          alert("Your school's access has been suspended. You will now be logged out.");
+          signOut(auth).then(() => {
+            window.location.href = "student-login.html";
+          });
+        }
+      });
+    }
 
   } catch (error) {
     console.error("Error loading dashboard:", error);
