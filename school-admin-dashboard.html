@@ -9,6 +9,196 @@
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="ai-chat-widget.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================
+       LECTURER MANAGEMENT ADDITIONS
+       (kept inline so you can lift these into dashboard.css later
+       if you'd rather not maintain a separate style block)
+    ========================== */
+    .toolbar-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .toolbar-row input[type="text"],
+    .toolbar-row select {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+
+    .toolbar-row input[type="text"] {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .history-badge.disabled {
+      background: rgba(202, 138, 4, 0.15);
+      color: #ca8a04;
+    }
+
+    .history-badge.deleted {
+      background: rgba(90, 90, 114, 0.15);
+      color: var(--text-light);
+    }
+
+    .lecturer-row-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .lecturer-row-actions button {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--text);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .lecturer-row-actions button:hover {
+      background: rgba(47, 111, 237, 0.1);
+      border-color: var(--primary);
+    }
+
+    .lecturer-row-actions button.danger:hover {
+      background: rgba(225, 29, 72, 0.1);
+      border-color: #e11d48;
+    }
+
+    .lecturer-row-actions button.warn:hover {
+      background: rgba(202, 138, 4, 0.1);
+      border-color: #ca8a04;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 17, 32, 0.55);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow);
+    }
+
+    .modal-box h3 {
+      margin-bottom: 18px;
+      font-size: 1.05rem;
+    }
+
+    .modal-close-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 6px;
+    }
+
+    .modal-close-row button {
+      background: transparent;
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+
+    .modal-box .form-group {
+      margin-bottom: 16px;
+    }
+
+    .modal-box label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .modal-box input,
+    .modal-box select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+
+    .course-checkbox-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .course-checkbox-list label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      font-weight: 400;
+      margin-bottom: 0;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .modal-actions .save-btn {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .modal-actions .cancel-btn {
+      background: transparent;
+      border: 1px solid var(--border) !important;
+      color: var(--text);
+    }
+  </style>
 </head>
 
 <body>
@@ -109,6 +299,11 @@
           </div>
 
           <div class="form-group">
+            <label for="lecturerStaffId">Staff ID (optional)</label>
+            <input type="text" id="lecturerStaffId" placeholder="e.g. STAFF-0231">
+          </div>
+
+          <div class="form-group">
             <label for="lecturerPassword">Temporary Password</label>
             <input type="text" id="lecturerPassword" placeholder="Give this to the lecturer securely">
           </div>
@@ -121,9 +316,10 @@
         <div class="session-card">
           <h3>📤 Bulk Upload Lecturers (CSV)</h3>
           <p class="request-hint">
-            CSV columns: <strong>fullName, email, department</strong> (department is optional).
-            A temporary password is generated automatically for each lecturer &mdash;
-            copy the results table below and send credentials to each lecturer yourself.
+            CSV columns: <strong>fullName, email, department, staffId, phone, faculty</strong>
+            (only fullName and email are required). A temporary password is generated
+            automatically for each lecturer &mdash; copy the results table below and send
+            credentials to each lecturer yourself.
           </p>
 
           <div class="form-group">
@@ -138,8 +334,19 @@
           <div id="bulkResultsContainer" style="margin-top: 18px;"></div>
         </div>
 
-        <div class="session-card">
+        <div class="session-card" style="max-width: 100%;">
           <h3>📋 All Lecturers</h3>
+
+          <div class="toolbar-row">
+            <input type="text" id="lecturerSearchInput" placeholder="Search by name, email, department, or staff ID...">
+            <select id="lecturerStatusFilter">
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="disabled">Disabled</option>
+              <option value="deleted">Deleted</option>
+            </select>
+          </div>
+
           <div id="lecturersList" class="session-history-list">
             <p class="placeholder-text">Loading lecturers...</p>
           </div>
@@ -169,10 +376,49 @@
             <input type="text" id="courseDepartmentInput" placeholder="e.g. Computer Science">
           </div>
 
+          <div class="form-group">
+            <label for="courseUnitInput">Unit</label>
+            <input type="number" id="courseUnitInput" placeholder="e.g. 3" min="0">
+          </div>
+
+          <div class="form-group">
+            <label for="courseLevelInput">Level</label>
+            <input type="text" id="courseLevelInput" placeholder="e.g. 100">
+          </div>
+
+          <div class="form-group">
+            <label for="courseSemesterInput">Semester</label>
+            <select id="courseSemesterInput">
+              <option value="">Select semester</option>
+              <option value="First">First</option>
+              <option value="Second">Second</option>
+            </select>
+          </div>
+
           <div id="courseFormMessage" class="form-message"></div>
 
           <button id="addCourseBtn" type="button">Add Course</button>
         </div>
+
+        <div class="session-card">
+          <h3>📤 Bulk Upload Courses (CSV)</h3>
+          <p class="request-hint">
+            CSV columns: <strong>courseCode, courseTitle, unit, department, level, semester</strong>.
+            Duplicate course codes (already in your system, or repeated within the file) are skipped automatically and listed below.
+          </p>
+
+          <div class="form-group">
+            <label for="courseCsvInput">CSV File</label>
+            <input type="file" id="courseCsvInput" accept=".csv">
+          </div>
+
+          <div id="courseBulkUploadMessage" class="form-message"></div>
+
+          <button id="uploadCourseCsvBtn" type="button">Upload &amp; Import Courses</button>
+
+          <div id="courseBulkResultsContainer" style="margin-top: 18px;"></div>
+        </div>
+
 
         <div class="session-card">
           <h3>⏳ Pending Course Requests</h3>
@@ -191,6 +437,70 @@
       </section>
 
     </main>
+  </div>
+
+  <!-- ===========================
+       EDIT LECTURER MODAL
+  =========================== -->
+  <div id="editLecturerModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-close-row">
+        <button type="button" id="closeEditModalBtn">✖</button>
+      </div>
+      <h3>Edit Lecturer</h3>
+
+      <input type="hidden" id="editLecturerId">
+
+      <div class="form-group">
+        <label for="editLecturerFullName">Full Name</label>
+        <input type="text" id="editLecturerFullName">
+      </div>
+
+      <div class="form-group">
+        <label for="editLecturerDepartment">Department</label>
+        <input type="text" id="editLecturerDepartment">
+      </div>
+
+      <div class="form-group">
+        <label for="editLecturerStaffId">Staff ID</label>
+        <input type="text" id="editLecturerStaffId">
+      </div>
+
+      <div class="form-group">
+        <label>Assigned Courses</label>
+        <div id="editLecturerCourseList" class="course-checkbox-list">
+          <p class="placeholder-text">Loading courses...</p>
+        </div>
+      </div>
+
+      <div id="editLecturerMessage" class="form-message"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" id="cancelEditModalBtn">Cancel</button>
+        <button type="button" class="save-btn" id="saveLecturerEditBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===========================
+       RESET PASSWORD MODAL
+  =========================== -->
+  <div id="resetPasswordModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-close-row">
+        <button type="button" id="closeResetModalBtn">✖</button>
+      </div>
+      <h3>Reset Lecturer Password</h3>
+
+      <p class="request-hint" id="resetPasswordEmailLine"></p>
+
+      <div id="resetPasswordMessage" class="form-message"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" id="cancelResetModalBtn">Cancel</button>
+        <button type="button" class="save-btn" id="sendResetEmailBtn">Send Reset Email</button>
+      </div>
+    </div>
   </div>
 
   <script src="dashboard-theme.js"></script>

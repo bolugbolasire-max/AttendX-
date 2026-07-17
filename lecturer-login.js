@@ -51,6 +51,25 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
 
+    // Block login for lecturers who have been disabled or deleted by
+    // their School Admin. Their account and Firestore doc still exist
+    // (so attendance history stays intact) — this just gates the login.
+    if (userData.status === "disabled") {
+      await signOut(auth);
+      showMessage("Your account has been disabled. Please contact your School Admin.", "error");
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Login";
+      return;
+    }
+
+    if (userData.status === "deleted") {
+      await signOut(auth);
+      showMessage("This account is no longer active. Please contact your School Admin.", "error");
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Login";
+      return;
+    }
+
     // Block login if the lecturer's school has been suspended by the
     // Super Admin. We sign them back out so no dashboard-eligible
     // session is left active.
