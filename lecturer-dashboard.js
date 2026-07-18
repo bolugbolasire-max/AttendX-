@@ -1012,6 +1012,47 @@ function getCurrentLocation() {
 }
 
 // ==========================
+// SESSION-STARTED NOTIFICATIONS
+// Looks up everyone actively enrolled in this course at this school,
+// and writes one "notifications" doc per student. Fire-and-forget from
+// the caller's perspective — errors are logged, never thrown, so a
+// notification problem can never prevent a session from starting.
+// ==========================
+async function notifyEnrolledStudentsOfNewSession(courseName, schoolId) {
+  try {
+    const enrollQuery = query(
+      collection(db, "enrollments"),
+      where("schoolId", "==", schoolId),
+      where("courseName", "==", courseName),
+      where("status", "==", "active")
+    );
+    const enrollSnap = await getDocs(enrollQuery);
+
+    if (enrollSnap.empty) return;
+
+    const writes = enrollSnap.docs.map((enrollDoc) => {
+      const studentUid = enrollDoc.data().studentUid;
+      if (!studentUid) return null;
+
+      return addDoc(collection(db, "notifications"), {
+        studentUid,
+        type: "session-started",
+        title: "New session started",
+        body: `A new session has started for ${courseName}.`,
+        courseName,
+        read: false,
+        createdAt: serverTimestamp(),
+        readAt: null
+      });
+    }).filter(Boolean);
+
+    await Promise.all(writes);
+  } catch (error) {
+    console.error("Failed to notify enrolled students of new session:", error);
+  }
+}
+
+// ==========================
 // START SESSION
 // ==========================
 startSessionBtn.addEventListener("click", async () => {
@@ -1064,6 +1105,12 @@ startSessionBtn.addEventListener("click", async () => {
     });
 
     currentSessionId = sessionRef.id;
+
+    // Notify every student enrolled in this course that a session has
+    // started. This never blocks the session itself: if the enrollment
+    // lookup or any notification write fails, the lecturer still gets
+    // their active session and QR code — we just log the problem.
+    notifyEnrolledStudentsOfNewSession(finalCourseName, currentLecturer.schoolId);
 
     // 3. Show the active session card with QR code
     activeCourseText.textContent = finalCourseName;

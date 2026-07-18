@@ -583,6 +583,24 @@ async function processCheckIn(sessionId) {
     checkedInAt: serverTimestamp()
   });
 
+  // Notify the student their attendance was recorded. Failure here
+  // should never block the check-in itself from succeeding, so this is
+  // wrapped separately and only logged if it fails.
+  try {
+    await addDoc(collection(db, "notifications"), {
+      studentUid: currentStudent.uid,
+      type: "attendance-marked",
+      title: "Attendance marked",
+      body: `You were marked present for ${session.courseName || "a session"}.`,
+      courseName: session.courseName || "",
+      read: false,
+      createdAt: serverTimestamp(),
+      readAt: null
+    });
+  } catch (notifError) {
+    console.error("Failed to create attendance notification:", notifError);
+  }
+
   showResult(
     "✅ Checked In!",
     `You've been marked present for ${session.courseName || "this session"}.`,
