@@ -157,6 +157,21 @@ onAuthStateChanged(auth, async (user) => {
 
     const userData = userDocSnap.data();
 
+    // Check the school's status BEFORE rendering anything. Previously
+    // this was only checked via a live listener started after the
+    // dashboard had already rendered and begun loading data — a student
+    // whose school was suspended before they even logged in would see
+    // a flash of their dashboard before being kicked out. Now it's
+    // checked upfront, so a suspended student never sees the dashboard
+    // at all.
+    if (userData.schoolId) {
+      const schoolSnap = await getDoc(doc(db, "schools", userData.schoolId));
+      if (schoolSnap.exists() && schoolSnap.data().status === "suspended") {
+        window.location.href = "school-suspended.html";
+        return;
+      }
+    }
+
     currentStudent = {
       uid: user.uid,
       fullName: userData.fullName || "Student",
@@ -216,9 +231,8 @@ onAuthStateChanged(auth, async (user) => {
     if (currentStudent.schoolId) {
       onSnapshot(doc(db, "schools", currentStudent.schoolId), (schoolSnap) => {
         if (schoolSnap.exists() && schoolSnap.data().status === "suspended") {
-          alert("Your school's access has been suspended. You will now be logged out.");
           signOut(auth).then(() => {
-            window.location.href = "student-login.html";
+            window.location.href = "school-suspended.html";
           });
         }
       });

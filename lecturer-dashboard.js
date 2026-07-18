@@ -129,11 +129,6 @@ onAuthStateChanged(auth, async (user) => {
 
     const userData = userDocSnap.data();
 
-    // Populate the dashboard with this lecturer's real data from Firestore
-    welcomeMessage.textContent = `Welcome, ${userData.fullName || "Lecturer"}`;
-    departmentLine.textContent = userData.department || "";
-    userEmail.textContent = userData.email || user.email;
-
     if (!userData.schoolId) {
       // Lecturer accounts should always be created by a School Admin, which
       // stamps schoolId onto the profile. If it's missing, something's off.
@@ -142,6 +137,22 @@ onAuthStateChanged(auth, async (user) => {
       dashboardContent.style.display = "flex";
       return;
     }
+
+    // Check the school's status BEFORE rendering anything further. This
+    // runs before the dashboard is revealed, so a lecturer whose school
+    // was already suspended never sees any dashboard content — the live
+    // listener further below only handles suspension happening DURING
+    // an active session.
+    const schoolCheckSnap = await getDoc(doc(db, "schools", userData.schoolId));
+    if (schoolCheckSnap.exists() && schoolCheckSnap.data().status === "suspended") {
+      window.location.href = "school-suspended.html";
+      return;
+    }
+
+    // Populate the dashboard with this lecturer's real data from Firestore
+    welcomeMessage.textContent = `Welcome, ${userData.fullName || "Lecturer"}`;
+    departmentLine.textContent = userData.department || "";
+    userEmail.textContent = userData.email || user.email;
 
     // Save lecturer info for use in session creation later
     currentLecturer = {
@@ -170,9 +181,8 @@ onAuthStateChanged(auth, async (user) => {
     // for their next login.
     onSnapshot(doc(db, "schools", currentLecturer.schoolId), (schoolSnap) => {
       if (schoolSnap.exists() && schoolSnap.data().status === "suspended") {
-        alert("Your school's access has been suspended. You will now be logged out.");
         signOut(auth).then(() => {
-          window.location.href = "lecturer-login.html";
+          window.location.href = "school-suspended.html";
         });
       }
     });

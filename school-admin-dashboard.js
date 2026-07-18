@@ -135,6 +135,17 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
+    // Check the school's status BEFORE rendering anything further. This
+    // runs before the dashboard is revealed, so a school admin whose
+    // school was already suspended never sees any dashboard content —
+    // the live listener further below only handles suspension happening
+    // DURING an active session.
+    const schoolCheckSnap = await getDoc(doc(db, "schools", userData.schoolId));
+    if (schoolCheckSnap.exists() && schoolCheckSnap.data().status === "suspended") {
+      window.location.href = "school-suspended.html";
+      return;
+    }
+
     currentAdmin = {
       uid: user.uid,
       schoolId: userData.schoolId,
@@ -162,9 +173,8 @@ onAuthStateChanged(auth, async (user) => {
     // for their next login.
     onSnapshot(doc(db, "schools", currentAdmin.schoolId), (schoolSnap) => {
       if (schoolSnap.exists() && schoolSnap.data().status === "suspended") {
-        alert("Your school's access has been suspended. You will now be logged out.");
         signOut(auth).then(() => {
-          window.location.href = "school-admin-login.html";
+          window.location.href = "school-suspended.html";
         });
       }
     });
