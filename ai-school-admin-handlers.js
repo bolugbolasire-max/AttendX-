@@ -1,11 +1,15 @@
 // ai-school-admin-handlers.js
 // Registers data-aware question handlers for the AttendX AI widget,
 // scoped to the currently logged-in school admin's own school. Include
-// this AFTER ai-chat-widget.js and firebase-config.js on
-// school-admin-dashboard.html.
+// this AFTER ai-nlp-engine.js, ai-chat-widget.js and firebase-config.js
+// on school-admin-dashboard.html.
 //
 // Every query below filters by the admin's own schoolId, matching the
-// same scoping the dashboard itself already uses.
+// same scoping the dashboard itself already uses — UNCHANGED.
+//
+// UPGRADED: intent detection goes through ai-nlp-engine.js so "how many
+// teachers do we have" / "lecturer count" / "how many lecutrers" (typo)
+// all correctly route to the lecturer-count answer.
 
 import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
@@ -36,20 +40,21 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-function normalize(text) {
-  return text.toLowerCase().trim();
-}
+const NLP = window.AttendXNLP;
 
 if (window.AttendXAI) {
-  window.AttendXAI.registerDataHandler(async (questionText) => {
+  window.AttendXAI.registerDataHandler(async (questionText, conversation) => {
     if (!currentSchoolId) return null; // not logged in / not resolved yet
-    const q = normalize(questionText);
 
-    const asksHowMany = /how many|number of|count/.test(q);
-    const asksLecturers = /lecturer/.test(q);
-    const asksCourses = /course/.test(q);
-    const asksPending = /pending|awaiting|request/.test(q);
-    const asksSessions = /session/.test(q);
+    const effectiveText = conversation ? conversation.expandWithContext(questionText) : questionText;
+    const intent = NLP ? NLP.detectIntent(effectiveText) : null;
+
+    const q = effectiveText.toLowerCase();
+    const asksHowMany = intent ? intent.wantsCount : /how many|number of|count/.test(q);
+    const asksLecturers = intent ? intent.mentionsLecturer : /lecturer/.test(q);
+    const asksCourses = intent ? intent.mentionsCourse : /course/.test(q);
+    const asksPending = intent ? intent.wantsAwaiting : /pending|awaiting|request/.test(q);
+    const asksSessions = intent ? intent.mentionsSession : /session/.test(q);
 
     // "How many lecturers do we have?"
     if (asksHowMany && asksLecturers) {

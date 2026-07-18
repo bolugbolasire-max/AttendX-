@@ -1,8 +1,12 @@
 // ai-super-admin-handlers.js
 // Registers data-aware question handlers for the AttendX AI widget,
 // scoped to platform-wide data the Super Admin is allowed to see.
-// Include this AFTER ai-chat-widget.js and firebase-config.js on
-// super-admin-dashboard.html.
+// Include this AFTER ai-nlp-engine.js, ai-chat-widget.js and
+// firebase-config.js on super-admin-dashboard.html.
+//
+// UPGRADED: intent detection goes through ai-nlp-engine.js for typo/
+// synonym tolerance ("how many schools are live" -> "active" via the
+// engine's synonym map).
 
 import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
@@ -20,19 +24,20 @@ onAuthStateChanged(auth, (user) => {
   isSuperAdminLoggedIn = !!user;
 });
 
-function normalize(text) {
-  return text.toLowerCase().trim();
-}
+const NLP = window.AttendXNLP;
 
 if (window.AttendXAI) {
-  window.AttendXAI.registerDataHandler(async (questionText) => {
+  window.AttendXAI.registerDataHandler(async (questionText, conversation) => {
     if (!isSuperAdminLoggedIn) return null;
-    const q = normalize(questionText);
 
-    const asksHowMany = /how many|number of|count/.test(q);
-    const asksSchools = /school/.test(q);
-    const asksActive = /active/.test(q);
-    const asksAdmins = /admin/.test(q);
+    const effectiveText = conversation ? conversation.expandWithContext(questionText) : questionText;
+    const intent = NLP ? NLP.detectIntent(effectiveText) : null;
+
+    const q = effectiveText.toLowerCase();
+    const asksHowMany = intent ? intent.wantsCount : /how many|number of|count/.test(q);
+    const asksSchools = intent ? intent.mentionsSchool : /school/.test(q);
+    const asksActive = intent ? intent.wantsOngoing : /active/.test(q);
+    const asksAdmins = intent ? intent.mentionsAdministrator : /admin/.test(q);
 
     // "How many schools are active?"
     if (asksHowMany && asksSchools && asksActive) {

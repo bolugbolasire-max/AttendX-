@@ -1,8 +1,12 @@
 // ai-student-handlers.js
 // Registers data-aware question handlers for the AttendX AI widget,
 // scoped to the currently logged-in student's own attendance history.
-// Include this AFTER ai-chat-widget.js and firebase-config.js on
-// student-dashboard.html.
+// Include this AFTER ai-nlp-engine.js, ai-chat-widget.js and
+// firebase-config.js on student-dashboard.html.
+//
+// UPGRADED: intent detection now goes through ai-nlp-engine.js, so
+// typos ("have i chekced in today") and phrasing variants ("was I
+// marked present today") are understood, not just the exact regexes.
 
 import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
@@ -21,19 +25,20 @@ onAuthStateChanged(auth, (user) => {
   currentStudentUid = user ? user.uid : null;
 });
 
-function normalize(text) {
-  return text.toLowerCase().trim();
-}
+const NLP = window.AttendXNLP;
 
 if (window.AttendXAI) {
-  window.AttendXAI.registerDataHandler(async (questionText) => {
+  window.AttendXAI.registerDataHandler(async (questionText, conversation) => {
     if (!currentStudentUid) return null;
-    const q = normalize(questionText);
 
-    const asksHowMany = /how many|number of|count/.test(q);
-    const asksSessions = /session|class|check.?in|attend/.test(q);
-    const asksLatest = /latest|last|most recent|when.*(last|latest)/.test(q);
-    const asksToday = /today/.test(q);
+    const effectiveText = conversation ? conversation.expandWithContext(questionText) : questionText;
+    const intent = NLP ? NLP.detectIntent(effectiveText) : null;
+
+    const q = effectiveText.toLowerCase();
+    const asksHowMany = intent ? intent.wantsCount : /how many|number of|count/.test(q);
+    const asksSessions = intent ? (intent.mentionsSession || intent.mentionsAttendance) : /session|class|check.?in|attend/.test(q);
+    const asksLatest = intent ? intent.wantsRecent : /latest|last|most recent|when.*(last|latest)/.test(q);
+    const asksToday = intent ? intent.mentionsToday : /today/.test(q);
 
     // "How many sessions have I attended?"
     if (asksHowMany && asksSessions) {
