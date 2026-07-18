@@ -34,7 +34,10 @@
       <nav class="sidebar-nav">
         <a href="#" class="nav-item active" data-section="overview">📊 Overview</a>
         <a href="#" class="nav-item" data-section="checkin">📷 Check In</a>
+        <a href="#" class="nav-item" data-section="courses">📚 My Courses</a>
         <a href="#" class="nav-item" data-section="history">🕒 Attendance History</a>
+        <a href="#" class="nav-item" data-section="analytics">📈 Analytics</a>
+        <a href="#" class="nav-item" data-section="profile">👤 My Profile</a>
       </nav>
 
       <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
@@ -43,9 +46,12 @@
     <main class="main-content">
 
       <header class="dashboard-header">
-        <div>
-          <h1 id="welcomeMessage">Welcome, Student</h1>
-          <p id="schoolLine" class="header-subtext"></p>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div id="profileAvatarSmall" style="width:44px; height:44px; border-radius:50%; background:var(--bg-alt); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:1.2rem; overflow:hidden; flex-shrink:0;">👤</div>
+          <div>
+            <h1 id="welcomeMessage">Welcome, Student</h1>
+            <p id="schoolLine" class="header-subtext"></p>
+          </div>
         </div>
         <div class="header-user">
           <span id="userEmail"></span>
@@ -55,12 +61,43 @@
       <!-- OVERVIEW -->
       <section id="overview" class="dashboard-section active">
         <h2>Overview</h2>
+
+        <div class="session-card" style="display:flex; align-items:center; gap:18px; max-width:100%;">
+          <div id="profileAvatarLarge" style="width:72px; height:72px; border-radius:50%; background:var(--bg-alt); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:2rem; overflow:hidden; flex-shrink:0;">👤</div>
+          <div>
+            <h3 id="overviewName" style="margin-bottom:4px;">Student</h3>
+            <p id="overviewLevelDept" style="color:var(--text-light); font-size:0.9rem;"></p>
+            <p id="todayStatusLine" style="margin-top:8px; font-size:0.9rem; font-weight:600;"></p>
+          </div>
+        </div>
+
         <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon">📚</div>
+            <div class="stat-card-body">
+              <h3 id="totalCoursesStat">0</h3>
+              <p>Total Courses</p>
+            </div>
+          </div>
           <div class="stat-card">
             <div class="stat-card-icon green">✅</div>
             <div class="stat-card-body">
               <h3 id="totalCheckIns">0</h3>
-              <p>Sessions Attended</p>
+              <p>Classes Attended</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon rose">❌</div>
+            <div class="stat-card-body">
+              <h3 id="classesMissedStat">0</h3>
+              <p>Classes Missed</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon amber">📊</div>
+            <div class="stat-card-body">
+              <h3 id="attendanceRateStat">0%</h3>
+              <p>Attendance Rate</p>
             </div>
           </div>
         </div>
@@ -115,15 +152,202 @@
 
       </section>
 
+      <!-- MY COURSES -->
+      <section id="courses" class="dashboard-section">
+        <h2>My Courses</h2>
+
+        <div class="session-card">
+          <h3>📖 Registered Courses</h3>
+          <div id="myCoursesList" class="session-history-list">
+            <p class="placeholder-text">Loading your courses...</p>
+          </div>
+        </div>
+
+        <div class="session-card">
+          <h3>➕ Enroll in a Course</h3>
+          <p class="request-hint">Browse available courses at your school and enroll.</p>
+
+          <div class="form-group">
+            <label for="enrollSearchInput">Search Courses</label>
+            <input type="text" id="enrollSearchInput" placeholder="Search by name, code, or department">
+          </div>
+
+          <div class="form-group">
+            <label for="enrollLevelFilter">Filter by Level</label>
+            <select id="enrollLevelFilter">
+              <option value="">All levels</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="enrollSemesterFilter">Filter by Semester</label>
+            <select id="enrollSemesterFilter">
+              <option value="">All semesters</option>
+              <option value="First">First</option>
+              <option value="Second">Second</option>
+            </select>
+          </div>
+
+          <div id="enrollMessage" class="form-message"></div>
+        </div>
+
+        <div class="session-card">
+          <h3>🗂 Available Courses</h3>
+          <div id="availableCoursesList" class="session-history-list">
+            <p class="placeholder-text">Loading available courses...</p>
+          </div>
+        </div>
+
+      </section>
+
       <!-- HISTORY -->
       <section id="history" class="dashboard-section">
         <h2>Attendance History</h2>
+
+        <div class="session-card">
+          <h3>🔍 Search &amp; Filter</h3>
+
+          <div class="form-group">
+            <label for="historySearchInput">Search</label>
+            <input type="text" id="historySearchInput" placeholder="Search by course name">
+          </div>
+
+          <div class="form-group">
+            <label for="historyCourseFilter">Filter by Course</label>
+            <select id="historyCourseFilter">
+              <option value="">All courses</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="historySemesterFilter">Filter by Semester</label>
+            <select id="historySemesterFilter">
+              <option value="">All semesters</option>
+              <option value="First">First</option>
+              <option value="Second">Second</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="historyDateFilter">Filter by Date</label>
+            <input type="date" id="historyDateFilter">
+          </div>
+
+          <button id="downloadHistoryBtn" type="button">⬇️ Download History (CSV)</button>
+        </div>
 
         <div class="session-card">
           <h3>🕒 My Check-ins</h3>
           <div id="historyList" class="session-history-list">
             <p class="placeholder-text">Loading history...</p>
           </div>
+        </div>
+
+      </section>
+
+      <!-- ANALYTICS -->
+      <section id="analytics" class="dashboard-section">
+        <h2>Analytics</h2>
+
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon amber">📊</div>
+            <div class="stat-card-body">
+              <h3 id="analyticsOverallRate">0%</h3>
+              <p>Overall Attendance</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">✅</div>
+            <div class="stat-card-body">
+              <h3 id="analyticsPresentTotal">0</h3>
+              <p>Present</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon rose">❌</div>
+            <div class="stat-card-body">
+              <h3 id="analyticsAbsentTotal">0</h3>
+              <p>Absent</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width: 100%;">
+          <h3>📚 Course-by-Course Attendance</h3>
+          <div id="courseAttendanceBreakdown">
+            <p class="placeholder-text">Loading...</p>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width: 100%;">
+          <h3>📈 Monthly Attendance Trend</h3>
+          <div id="monthlyTrendContainer">
+            <p class="placeholder-text">Loading...</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- PROFILE -->
+      <section id="profile" class="dashboard-section">
+        <h2>My Profile</h2>
+
+        <div class="session-card">
+          <h3>👤 Profile Details</h3>
+          <p><strong id="profileFullName">—</strong></p>
+          <p style="color:var(--text-light); font-size:0.85rem; margin-top:4px;" id="profileMatric"></p>
+          <p style="color:var(--text-light); font-size:0.85rem; margin-top:4px;" id="profileDeptLevel"></p>
+        </div>
+
+        <div class="session-card">
+          <h3>📱 Update Phone Number</h3>
+
+          <div class="form-group">
+            <label for="profilePhoneInput">Phone Number</label>
+            <input type="tel" id="profilePhoneInput" placeholder="e.g. 08012345678">
+          </div>
+
+          <div id="profilePhoneMessage" class="form-message"></div>
+
+          <button id="savePhoneBtn" type="button">Save Phone Number</button>
+        </div>
+
+        <div class="session-card">
+          <h3>✉️ Update Email</h3>
+          <p class="request-hint">You'll need to re-enter your current password to confirm this change, and verify the new email address.</p>
+
+          <div class="form-group">
+            <label for="profileEmailInput">New Email Address</label>
+            <input type="email" id="profileEmailInput" placeholder="new-email@example.com">
+          </div>
+
+          <div class="form-group">
+            <label for="profileEmailPassword">Current Password</label>
+            <input type="password" id="profileEmailPassword" placeholder="Enter current password">
+          </div>
+
+          <div id="profileEmailMessage" class="form-message"></div>
+
+          <button id="saveEmailBtn" type="button">Update Email</button>
+        </div>
+
+        <div class="session-card">
+          <h3>🔒 Change Password</h3>
+
+          <div class="form-group">
+            <label for="currentPasswordInput">Current Password</label>
+            <input type="password" id="currentPasswordInput" placeholder="Enter current password">
+          </div>
+
+          <div class="form-group">
+            <label for="newPasswordInput">New Password</label>
+            <input type="password" id="newPasswordInput" placeholder="Enter new password">
+          </div>
+
+          <div id="profilePasswordMessage" class="form-message"></div>
+
+          <button id="changePasswordBtn" type="button">Change Password</button>
         </div>
 
       </section>
