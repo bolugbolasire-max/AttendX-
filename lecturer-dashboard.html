@@ -38,7 +38,9 @@
         <a href="#" class="nav-item active" data-section="overview">📊 Overview</a>
         <a href="#" class="nav-item" data-section="sessions">🕒 Attendance Sessions</a>
         <a href="#" class="nav-item" data-section="courses">📚 My Courses</a>
+        <a href="#" class="nav-item" data-section="students">👨‍🎓 Student Attendance</a>
         <a href="#" class="nav-item" data-section="reports">📁 Reports</a>
+        <a href="#" class="nav-item" data-section="analytics">📈 Analytics</a>
       </nav>
 
       <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
@@ -67,7 +69,7 @@
             <div class="stat-card-icon">📚</div>
             <div class="stat-card-body">
               <h3 id="courseCount">0</h3>
-              <p>Courses</p>
+              <p>Courses Assigned</p>
             </div>
           </div>
           <div class="stat-card">
@@ -82,6 +84,34 @@
             <div class="stat-card-body">
               <h3 id="totalAttendance">0</h3>
               <p>Total Check-ins</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">👨‍🎓</div>
+            <div class="stat-card-body">
+              <h3 id="totalStudentsStat">0</h3>
+              <p>Total Students Seen</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon rose">📆</div>
+            <div class="stat-card-body">
+              <h3 id="todaySessionsStat">0</h3>
+              <p>Today's Sessions</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">🟢</div>
+            <div class="stat-card-body">
+              <h3 id="activeSessionsStat">0</h3>
+              <p>Active Sessions</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon amber">📊</div>
+            <div class="stat-card-body">
+              <h3 id="attendancePercentStat">0%</h3>
+              <p>Avg. Session Fill Rate</p>
             </div>
           </div>
         </div>
@@ -106,6 +136,11 @@
             <input type="text" id="otherCourseInput" placeholder="e.g. Advanced Algorithms">
           </div>
 
+          <div class="form-group">
+            <label for="qrExpiryMinutes">QR Expires After (minutes)</label>
+            <input type="number" id="qrExpiryMinutes" placeholder="e.g. 15" min="1" value="15">
+          </div>
+
           <div id="sessionFormMessage" class="form-message"></div>
 
           <button id="startSessionBtn" type="button">📍 Start Session (captures GPS)</button>
@@ -115,11 +150,13 @@
           <h3>🟢 Session Active</h3>
           <p id="activeCourseText" class="active-course-text"></p>
           <p class="gps-note">✅ GPS location captured and locked to this session.</p>
+          <p id="qrExpiryText" class="gps-note"></p>
 
           <div id="qrCodeContainer" class="qr-container"></div>
 
           <p class="session-id-text">Session ID: <span id="sessionIdText"></span></p>
 
+          <button id="downloadQrBtn" type="button" style="background: var(--secondary);">⬇️ Download QR Code</button>
           <button id="endSessionBtn" type="button" class="end-session-btn">🔴 End Session</button>
         </div>
 
@@ -135,6 +172,31 @@
       <!-- COURSES SECTION -->
       <section id="courses" class="dashboard-section">
         <h2>My Courses</h2>
+
+        <div class="session-card">
+          <h3>🔍 Search &amp; Filter</h3>
+
+          <div class="form-group">
+            <label for="courseSearchInput">Search Courses</label>
+            <input type="text" id="courseSearchInput" placeholder="Search by name, code, or department">
+          </div>
+
+          <div class="form-group">
+            <label for="courseLevelFilter">Filter by Level</label>
+            <select id="courseLevelFilter">
+              <option value="">All levels</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="courseSemesterFilter">Filter by Semester</label>
+            <select id="courseSemesterFilter">
+              <option value="">All semesters</option>
+              <option value="First">First</option>
+              <option value="Second">Second</option>
+            </select>
+          </div>
+        </div>
 
         <div class="session-card">
           <h3>📚 Available Courses</h3>
@@ -171,6 +233,37 @@
 
       </section>
 
+      <!-- STUDENT ATTENDANCE SECTION -->
+      <section id="students" class="dashboard-section">
+        <h2>Student Attendance</h2>
+
+        <div class="session-card">
+          <h3>👨‍🎓 View Students by Course</h3>
+
+          <div class="form-group">
+            <label for="studentCourseSelect">Select Course</label>
+            <select id="studentCourseSelect">
+              <option value="">Loading courses...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="studentSearchInput">Search Students</label>
+            <input type="text" id="studentSearchInput" placeholder="Search by name or matric number">
+          </div>
+
+          <div id="studentAttendanceMessage" class="form-message"></div>
+        </div>
+
+        <div class="session-card">
+          <h3>📋 Students</h3>
+          <div id="studentListContainer">
+            <p class="placeholder-text">Select a course above to view students.</p>
+          </div>
+        </div>
+
+      </section>
+
       <!-- REPORTS SECTION -->
       <section id="reports" class="dashboard-section">
         <h2>Reports</h2>
@@ -188,6 +281,7 @@
           <div id="reportMessage" class="form-message"></div>
 
           <button id="exportCsvBtn" type="button">⬇️ Export as CSV</button>
+          <button id="exportPdfBtn" type="button" style="background: var(--secondary);">⬇️ Export as PDF</button>
         </div>
 
         <div class="session-card">
@@ -197,12 +291,72 @@
           </div>
         </div>
 
+        <div class="session-card">
+          <h3>📊 Course Report</h3>
+
+          <div class="form-group">
+            <label for="courseReportSelect">Select a Course</label>
+            <select id="courseReportSelect">
+              <option value="">Loading courses...</option>
+            </select>
+          </div>
+
+          <div id="courseReportContainer">
+            <p class="placeholder-text">Select a course above to see its report.</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ANALYTICS SECTION -->
+      <section id="analytics" class="dashboard-section">
+        <h2>Analytics</h2>
+
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon">🕒</div>
+            <div class="stat-card-body">
+              <h3 id="analyticsSessionsCount">0</h3>
+              <p>Total Sessions Conducted</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">✅</div>
+            <div class="stat-card-body">
+              <h3 id="analyticsPresentCount">0</h3>
+              <p>Students Present (check-ins)</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon rose">❌</div>
+            <div class="stat-card-body">
+              <h3 id="analyticsAbsentCount">0</h3>
+              <p>Est. Students Absent</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width: 100%;">
+          <h3>📈 Attendance Trend (last sessions)</h3>
+          <div id="attendanceTrendContainer">
+            <p class="placeholder-text">Loading trend...</p>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width: 100%;">
+          <h3>📚 Course Comparison</h3>
+          <div id="courseComparisonContainer">
+            <p class="placeholder-text">Loading course comparison...</p>
+          </div>
+        </div>
+
       </section>
 
     </main>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="dashboard-theme.js"></script>
   <script type="module" src="lecturer-dashboard.js"></script>
   <script src="ai-chat-widget.js" defer></script>

@@ -11,6 +11,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -63,9 +64,43 @@ const courseRequestList = document.getElementById("courseRequestList");
 const reportSessionSelect = document.getElementById("reportSessionSelect");
 const reportMessage = document.getElementById("reportMessage");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
+const exportPdfBtn = document.getElementById("exportPdfBtn");
 const attendeeTableContainer = document.getElementById("attendeeTableContainer");
+const courseReportSelect = document.getElementById("courseReportSelect");
+const courseReportContainer = document.getElementById("courseReportContainer");
+
+// New overview stat elements
+const totalStudentsStatEl = document.getElementById("totalStudentsStat");
+const todaySessionsStatEl = document.getElementById("todaySessionsStat");
+const activeSessionsStatEl = document.getElementById("activeSessionsStat");
+const attendancePercentStatEl = document.getElementById("attendancePercentStat");
+
+// My Courses search/filter elements
+const courseSearchInput = document.getElementById("courseSearchInput");
+const courseLevelFilter = document.getElementById("courseLevelFilter");
+const courseSemesterFilter = document.getElementById("courseSemesterFilter");
+
+// QR expiry / download elements
+const qrExpiryMinutesInput = document.getElementById("qrExpiryMinutes");
+const qrExpiryText = document.getElementById("qrExpiryText");
+const downloadQrBtn = document.getElementById("downloadQrBtn");
+
+// Student Attendance section elements
+const studentCourseSelect = document.getElementById("studentCourseSelect");
+const studentSearchInput = document.getElementById("studentSearchInput");
+const studentAttendanceMessage = document.getElementById("studentAttendanceMessage");
+const studentListContainer = document.getElementById("studentListContainer");
+
+// Analytics elements
+const analyticsSessionsCount = document.getElementById("analyticsSessionsCount");
+const analyticsPresentCount = document.getElementById("analyticsPresentCount");
+const analyticsAbsentCount = document.getElementById("analyticsAbsentCount");
+const attendanceTrendContainer = document.getElementById("attendanceTrendContainer");
+const courseComparisonContainer = document.getElementById("courseComparisonContainer");
 
 let lecturerSessions = []; // cache of this lecturer's sessions, used by the Reports dropdown
+let allCoursesForLecturer = []; // cache of this school's courses, used by search/filter/dropdowns
+let currentQrExpiryTimer = null; // handle for the QR expiry countdown, cleared on session end
 
 let currentLecturer = null; // filled in once auth guard confirms lecturer
 let currentSessionId = null; // Firestore doc id of the active session
@@ -154,6 +189,13 @@ onAuthStateChanged(auth, async (user) => {
 
     // Load sessions into the Reports dropdown
     loadReportSessionOptions();
+
+    // Load courses into the Course Report and Student Attendance dropdowns
+    loadCourseReportOptions();
+    loadStudentCourseOptions();
+
+    // Load Analytics section data
+    loadAnalytics();
 
   } catch (error) {
     console.error("Error loading dashboard:", error);
@@ -344,6 +386,136 @@ exportCsvBtn.addEventListener("click", async () => {
 });
 
 // ==========================
+// EXPORT ATTENDANCE AS PDF
+// ==========================
+exportPdfBtn.addEventListener("click", async () => {
+  const sessionId = reportSessionSelect.value;
+
+  if (!sessionId) {
+    reportMessage.textContent = "Please select a session first.";
+    reportMessage.className = "form-message error";
+    return;
+  }
+
+  const session = lecturerSessions.find((s) => s.id === sessionId);
+
+  try {
+    const checkInsQuery = query(
+      collection(db, "checkIns"),
+      where("sessionId", "==", sessionId)
+    );
+    const snapshot = await getDocs(checkInsQuery);
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+
+    pdf.setFontSize(16);
+    pdf.text(session ? session.courseName : "Attendance Report", 14, 18);
+    pdf.setFontSize(10);
+    pdf.setTextColor(100);
+    const dateText = session && session.createdAt && session.createdAt.toDate
+      ? session.createdAt.toDate().toLocaleString()
+      : "";
+    pdf.text(dateText, 14, 25);
+
+    let y = 38;
+    pdf.setFontSize(11);
+    pdf.setTextColor(0);
+    pdf.text("Name", 14, y);
+    pdf.text("Matric Number", 90, y);
+    pdf.text("Check-in Time", 145, y);
+    y += 4;
+    pdf.line(14, y, 196, y);
+    y += 6;
+
+    if (snapshot.empty) {
+      pdf.setTextColor(120);
+      pdf.text("No check-ins recorded for this session.", 14, y);
+    } else {
+      snapshot.forEach((docSnap) => {
+        const checkIn = docSnap.data();
+        const timeText = checkIn.checkedInAt && checkIn.checkedInAt.toDate
+          ? checkIn.checkedInAt.toDate().toLocaleString()
+          : "";
+
+        if (y > 280) {
+          pdf.addPage();
+          y = 20;
+        }
+
+        pdf.setFontSize(10);
+        pdf.text(String(checkIn.studentName || ""), 14, y);
+        pdf.text(String(checkIn.matricNumber || ""), 90, y);
+        pdf.text(timeText, 145, y);
+        y += 7;
+      });
+    }
+
+    const fileName = session ? `${session.courseName}-attendance.pdf` : "attendance.pdf";
+    pdf.save(fileName.replace(/\s+/g, "_"));
+
+    reportMessage.textContent = "PDF downloaded successfully.";
+    reportMessage.className = "form-message success";
+
+  } catch (error) {
+    console.error("Error exporting PDF:", error);
+    reportMessage.textContent = "Couldn't export this session right now. Please try again.";
+    reportMessage.className = "form-message error";
+  }
+});
+
+// ==========================
+// COURSE-LEVEL REPORT
+// ==========================
+async function loadCourseReportOptions() {
+  if (!currentLecturer) return;
+  try {
+    if (allCoursesForLecturer.length === 0) await loadCourseListDisplay();
+
+    courseReportSelect.innerHTML = `<option value="">Select a course...</option>` +
+      allCoursesForLecturer
+        .filter((c) => !c.archived)
+        .map((c) => `<option value="${escapeHtmlLect(c.courseName)}">${escapeHtmlLect(c.courseCode || "")} - ${escapeHtmlLect(c.courseName)}</option>`)
+        .join("");
+
+  } catch (error) {
+    console.error("Error loading course report options:", error);
+    courseReportSelect.innerHTML = `<option value="">Could not load courses</option>`;
+  }
+}
+
+courseReportSelect.addEventListener("change", () => {
+  const courseName = courseReportSelect.value;
+
+  if (!courseName) {
+    courseReportContainer.innerHTML = `<p class="placeholder-text">Select a course above to see its report.</p>`;
+    return;
+  }
+
+  const relevantSessions = lecturerSessions.filter((s) => s.courseName === courseName);
+
+  if (relevantSessions.length === 0) {
+    courseReportContainer.innerHTML = `<p class="placeholder-text">No sessions held for this course yet.</p>`;
+    return;
+  }
+
+  const totalSessions = relevantSessions.length;
+  const totalCheckIns = relevantSessions.reduce((sum, s) => sum + (s.checkInCount || 0), 0);
+  const avgPerSession = Math.round(totalCheckIns / totalSessions);
+  const maxCheckIns = Math.max(...relevantSessions.map((s) => s.checkInCount || 0), 0);
+  const fillRate = maxCheckIns > 0 ? Math.round((avgPerSession / maxCheckIns) * 100) : 0;
+
+  courseReportContainer.innerHTML = `
+    <div class="history-item">
+      <div class="history-item-info">
+        <h4>${totalSessions} session${totalSessions === 1 ? "" : "s"} held</h4>
+        <p>${totalCheckIns} total check-ins · ${avgPerSession} avg. per session · ${fillRate}% fill rate vs. best session</p>
+      </div>
+    </div>
+  `;
+});
+
+// ==========================
 // DISPLAY COURSE LIST (My Courses tab)
 // ==========================
 async function loadCourseListDisplay() {
@@ -355,31 +527,70 @@ async function loadCourseListDisplay() {
     );
     const coursesSnapshot = await getDocs(coursesQuery);
 
-    if (coursesSnapshot.empty) {
-      courseListDisplay.innerHTML = `<p class="placeholder-text">No courses available yet.</p>`;
-      return;
-    }
-
-    let html = "";
+    allCoursesForLecturer = [];
     coursesSnapshot.forEach((docSnap) => {
-      const course = docSnap.data();
-      html += `
-        <div class="history-item">
-          <div class="history-item-info">
-            <h4>${course.courseName}</h4>
-            <p>${course.courseCode || ""} ${course.department ? "· " + course.department : ""}</p>
-          </div>
-        </div>
-      `;
+      allCoursesForLecturer.push({ id: docSnap.id, ...docSnap.data() });
     });
 
-    courseListDisplay.innerHTML = html;
+    // Populate the level filter dropdown with whatever distinct levels
+    // actually exist in this school's courses.
+    const levels = [...new Set(allCoursesForLecturer.map((c) => c.level).filter(Boolean))].sort();
+    courseLevelFilter.innerHTML = `<option value="">All levels</option>` +
+      levels.map((lvl) => `<option value="${escapeHtmlLect(lvl)}">${escapeHtmlLect(lvl)}</option>`).join("");
+
+    renderCourseListDisplay();
 
   } catch (error) {
     console.error("Error loading course list:", error);
     courseListDisplay.innerHTML = `<p class="placeholder-text">Couldn't load courses right now — check your connection and try refreshing.</p>`;
   }
 }
+
+// Renders allCoursesForLecturer into the My Courses list, applying the
+// current search text and level/semester filters. Called on load and
+// on every search/filter input change — no re-fetch needed.
+function renderCourseListDisplay() {
+  const searchTerm = (courseSearchInput.value || "").trim().toLowerCase();
+  const levelFilterVal = courseLevelFilter.value;
+  const semesterFilterVal = courseSemesterFilter.value;
+
+  const filtered = allCoursesForLecturer.filter((course) => {
+    if (course.archived) return false;
+    if (levelFilterVal && course.level !== levelFilterVal) return false;
+    if (semesterFilterVal && course.semester !== semesterFilterVal) return false;
+
+    if (searchTerm) {
+      const haystack = [course.courseName, course.courseCode, course.department]
+        .filter(Boolean).join(" ").toLowerCase();
+      if (!haystack.includes(searchTerm)) return false;
+    }
+
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    courseListDisplay.innerHTML = `<p class="placeholder-text">${allCoursesForLecturer.length === 0 ? "No courses available yet." : "No courses match your search/filter."}</p>`;
+    return;
+  }
+
+  let html = "";
+  filtered.forEach((course) => {
+    html += `
+      <div class="history-item">
+        <div class="history-item-info">
+          <h4>${escapeHtmlLect(course.courseName)}</h4>
+          <p>${escapeHtmlLect(course.courseCode || "")} ${course.department ? "· " + escapeHtmlLect(course.department) : ""} ${course.level ? "· Level " + escapeHtmlLect(course.level) : ""} ${course.semester ? "· " + escapeHtmlLect(course.semester) + " Semester" : ""} ${course.unit ? "· " + course.unit + " unit" + (course.unit === 1 ? "" : "s") : ""}</p>
+        </div>
+      </div>
+    `;
+  });
+
+  courseListDisplay.innerHTML = html;
+}
+
+courseSearchInput.addEventListener("input", renderCourseListDisplay);
+courseLevelFilter.addEventListener("change", renderCourseListDisplay);
+courseSemesterFilter.addEventListener("change", renderCourseListDisplay);
 
 // ==========================
 // SUBMIT A NEW COURSE REQUEST
@@ -499,32 +710,68 @@ async function loadSessionHistory() {
       sessionHistoryList.innerHTML = `<p class="placeholder-text">No sessions created yet.</p>`;
       sessionCountEl.textContent = "0";
       totalAttendanceEl.textContent = "0";
+      todaySessionsStatEl.textContent = "0";
+      activeSessionsStatEl.textContent = "0";
+      totalStudentsStatEl.textContent = "0";
+      attendancePercentStatEl.textContent = "0%";
       return;
     }
 
     let sessionCount = 0;
     let totalCheckIns = 0;
+    let todayCount = 0;
+    let activeCount = 0;
     let historyHTML = "";
+
+    const todayStr = new Date().toDateString();
+    const checkInCounts = []; // used below to compute average session fill rate
+
+    lecturerSessions = [];
 
     snapshot.forEach((docSnap) => {
       const session = docSnap.data();
+      const sessionData = { id: docSnap.id, ...session };
+      lecturerSessions.push(sessionData);
+
       sessionCount++;
-      totalCheckIns += session.checkInCount || 0;
+      const thisCheckInCount = session.checkInCount || 0;
+      totalCheckIns += thisCheckInCount;
+      checkInCounts.push(thisCheckInCount);
 
-      const dateText = session.createdAt && session.createdAt.toDate
-        ? session.createdAt.toDate().toLocaleString()
-        : "Just now";
+      if (session.active) activeCount++;
 
+      const sessionDate = session.createdAt && session.createdAt.toDate
+        ? session.createdAt.toDate()
+        : null;
+
+      if (sessionDate && sessionDate.toDateString() === todayStr) {
+        todayCount++;
+      }
+
+      const dateText = sessionDate ? sessionDate.toLocaleString() : "Just now";
       const statusClass = session.active ? "active" : "ended";
       const statusLabel = session.active ? "🟢 Active" : "Ended";
+
+      // A session can only be deleted if no attendance has been
+      // recorded for it yet (checkInCount is 0 or missing) — this
+      // preserves attendance records the same way lecturer deletion does
+      // on the admin side.
+      const canDelete = thisCheckInCount === 0;
 
       historyHTML += `
         <div class="history-item">
           <div class="history-item-info">
-            <h4>${session.courseName}</h4>
-            <p>${dateText}</p>
+            <h4>${escapeHtmlLect(session.courseName)}</h4>
+            <p>${dateText} · ${thisCheckInCount} check-in${thisCheckInCount === 1 ? "" : "s"}</p>
           </div>
-          <span class="history-badge ${statusClass}">${statusLabel}</span>
+          <div class="lecturer-row-actions">
+            <span class="history-badge ${statusClass}">${statusLabel}</span>
+            <button type="button" class="edit-session-btn" data-id="${docSnap.id}">✏️ Edit</button>
+            ${canDelete
+              ? `<button type="button" class="danger delete-session-btn" data-id="${docSnap.id}">🗑 Delete</button>`
+              : ""
+            }
+          </div>
         </div>
       `;
     });
@@ -532,11 +779,81 @@ async function loadSessionHistory() {
     sessionHistoryList.innerHTML = historyHTML;
     sessionCountEl.textContent = sessionCount.toString();
     totalAttendanceEl.textContent = totalCheckIns.toString();
+    todaySessionsStatEl.textContent = todayCount.toString();
+    activeSessionsStatEl.textContent = activeCount.toString();
+
+    // "Fill rate": average check-ins per session, relative to this
+    // lecturer's best-attended session. We don't have course enrollment
+    // data to compute a true attendance percentage against, so this is
+    // presented as a relative fill-rate rather than a hard attendance %.
+    const maxCheckIns = Math.max(...checkInCounts, 0);
+    const avgCheckIns = checkInCounts.reduce((a, b) => a + b, 0) / checkInCounts.length;
+    const fillRate = maxCheckIns > 0 ? Math.round((avgCheckIns / maxCheckIns) * 100) : 0;
+    attendancePercentStatEl.textContent = `${fillRate}%`;
+
+    // Total unique students seen, across all this lecturer's sessions —
+    // requires reading checkIns, so it's computed separately below
+    // rather than blocking the history render above.
+    updateTotalStudentsStat();
+
+    // Wire up the new per-row actions
+    document.querySelectorAll(".edit-session-btn").forEach((btn) => {
+      btn.addEventListener("click", () => openEditSessionPrompt(btn.getAttribute("data-id")));
+    });
+    document.querySelectorAll(".delete-session-btn").forEach((btn) => {
+      btn.addEventListener("click", () => confirmDeleteSession(btn.getAttribute("data-id")));
+    });
 
   } catch (error) {
     console.error("Error loading session history:", error);
     sessionHistoryList.innerHTML = `<p class="placeholder-text">Couldn't load your sessions right now — check your connection and try refreshing.</p>`;
   }
+}
+
+// Counts distinct students (by matricNumber, falling back to studentUid)
+// who have checked into any of this lecturer's sessions.
+async function updateTotalStudentsStat() {
+  if (!currentLecturer || lecturerSessions.length === 0) {
+    totalStudentsStatEl.textContent = "0";
+    return;
+  }
+
+  try {
+    const sessionIds = lecturerSessions.map((s) => s.id);
+    const uniqueStudents = new Set();
+
+    // Firestore "in" queries cap at 30 values, so batch if needed.
+    const batches = [];
+    for (let i = 0; i < sessionIds.length; i += 30) {
+      batches.push(sessionIds.slice(i, i + 30));
+    }
+
+    for (const batch of batches) {
+      const checkInsQuery = query(
+        collection(db, "checkIns"),
+        where("sessionId", "in", batch)
+      );
+      const snapshot = await getDocs(checkInsQuery);
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        uniqueStudents.add(data.matricNumber || data.studentUid || docSnap.id);
+      });
+    }
+
+    totalStudentsStatEl.textContent = uniqueStudents.size.toString();
+
+  } catch (error) {
+    console.error("Error computing total students stat:", error);
+  }
+}
+
+function escapeHtmlLect(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // Update the course count stat too, once courses are loaded
@@ -661,6 +978,11 @@ startSessionBtn.addEventListener("click", async () => {
     // 1. Capture GPS — this will prompt the browser's location permission
     const location = await getCurrentLocation();
 
+    // Determine QR expiry — defaults to 15 minutes if left blank/invalid
+    const expiryMinutesRaw = parseInt(qrExpiryMinutesInput.value, 10);
+    const expiryMinutes = (Number.isFinite(expiryMinutesRaw) && expiryMinutesRaw > 0) ? expiryMinutesRaw : 15;
+    const expiresAtMs = Date.now() + expiryMinutes * 60 * 1000;
+
     // 2. Create the session document in Firestore
     const sessionRef = await addDoc(collection(db, "sessions"), {
       courseName: finalCourseName,
@@ -672,6 +994,8 @@ startSessionBtn.addEventListener("click", async () => {
       longitude: location.longitude,
       gpsAccuracy: location.accuracy,
       active: true,
+      qrExpiryMinutes: expiryMinutes,
+      qrExpiresAt: expiresAtMs,
       createdAt: serverTimestamp()
     });
 
@@ -688,6 +1012,11 @@ startSessionBtn.addEventListener("click", async () => {
       width: 220,
       height: 220
     });
+
+    // Start a live countdown showing when the QR will expire, and
+    // automatically end the session once time is up so a stale QR
+    // code can't keep accepting check-ins indefinitely.
+    startQrExpiryCountdown(expiresAtMs);
 
     sessionFormCard.style.display = "none";
     activeSessionCard.style.display = "block";
@@ -729,6 +1058,10 @@ endSessionBtn.addEventListener("click", async () => {
 
     // Reset UI back to the form
     currentSessionId = null;
+    if (currentQrExpiryTimer) {
+      clearInterval(currentQrExpiryTimer);
+      currentQrExpiryTimer = null;
+    }
     activeSessionCard.style.display = "none";
     sessionFormCard.style.display = "block";
     startSessionBtn.disabled = false;
@@ -749,8 +1082,327 @@ endSessionBtn.addEventListener("click", async () => {
 });
 
 // ==========================
-// SIDEBAR TAB SWITCHING
+// QR EXPIRY COUNTDOWN
 // ==========================
+// Shows a live "expires in Xm Ys" line and, once the timer runs out,
+// automatically ends the session so the QR code stops accepting
+// check-ins rather than staying valid forever.
+function startQrExpiryCountdown(expiresAtMs) {
+  if (currentQrExpiryTimer) clearInterval(currentQrExpiryTimer);
+
+  function tick() {
+    const remainingMs = expiresAtMs - Date.now();
+
+    if (remainingMs <= 0) {
+      qrExpiryText.textContent = "⏰ QR code expired — ending session...";
+      clearInterval(currentQrExpiryTimer);
+      currentQrExpiryTimer = null;
+      if (currentSessionId) {
+        endSessionBtn.click();
+      }
+      return;
+    }
+
+    const minutes = Math.floor(remainingMs / 60000);
+    const seconds = Math.floor((remainingMs % 60000) / 1000);
+    qrExpiryText.textContent = `⏳ QR expires in ${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+  }
+
+  tick();
+  currentQrExpiryTimer = setInterval(tick, 1000);
+}
+
+// ==========================
+// DOWNLOAD QR CODE AS IMAGE
+// ==========================
+downloadQrBtn.addEventListener("click", () => {
+  const canvas = qrCodeContainer.querySelector("canvas");
+  const img = qrCodeContainer.querySelector("img");
+
+  const sourceEl = canvas || img;
+  if (!sourceEl) {
+    alert("No QR code to download yet.");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.download = `session-${currentSessionId || "qr"}.png`;
+  link.href = canvas ? canvas.toDataURL("image/png") : img.src;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
+
+// ==========================
+// EDIT SESSION (course name only — GPS/timing stay locked once created)
+// ==========================
+async function openEditSessionPrompt(sessionId) {
+  const session = lecturerSessions.find((s) => s.id === sessionId);
+  if (!session) return;
+
+  const newName = prompt("Edit course name for this session:", session.courseName);
+  if (newName === null) return; // cancelled
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === session.courseName) return;
+
+  try {
+    await updateDoc(doc(db, "sessions", sessionId), { courseName: trimmed });
+    loadSessionHistory();
+    loadReportSessionOptions();
+  } catch (error) {
+    console.error("Error editing session:", error);
+    alert("Could not update this session. Please try again.");
+  }
+}
+
+// ==========================
+// DELETE SESSION (only allowed when zero attendance has been recorded)
+// ==========================
+async function confirmDeleteSession(sessionId) {
+  const session = lecturerSessions.find((s) => s.id === sessionId);
+  if (!session) return;
+
+  if ((session.checkInCount || 0) > 0) {
+    alert("This session already has attendance recorded and can't be deleted, to preserve the record.");
+    return;
+  }
+
+  const ok = confirm(`Delete this session for "${session.courseName}"? This cannot be undone.`);
+  if (!ok) return;
+
+  try {
+    await deleteDoc(doc(db, "sessions", sessionId));
+    loadSessionHistory();
+    loadReportSessionOptions();
+  } catch (error) {
+    console.error("Error deleting session:", error);
+    alert("Could not delete this session. Please try again.");
+  }
+}
+
+// ==========================
+// STUDENT ATTENDANCE SECTION
+// ==========================
+let currentStudentRoster = []; // cache of students for the currently selected course
+
+async function loadStudentCourseOptions() {
+  if (!currentLecturer) return;
+  try {
+    if (allCoursesForLecturer.length === 0) await loadCourseListDisplay();
+
+    studentCourseSelect.innerHTML = `<option value="">Select a course...</option>` +
+      allCoursesForLecturer
+        .filter((c) => !c.archived)
+        .map((c) => `<option value="${escapeHtmlLect(c.courseName)}">${escapeHtmlLect(c.courseCode || "")} - ${escapeHtmlLect(c.courseName)}</option>`)
+        .join("");
+
+  } catch (error) {
+    console.error("Error loading student course options:", error);
+    studentCourseSelect.innerHTML = `<option value="">Could not load courses</option>`;
+  }
+}
+
+studentCourseSelect.addEventListener("change", async () => {
+  const courseName = studentCourseSelect.value;
+
+  if (!courseName) {
+    studentListContainer.innerHTML = `<p class="placeholder-text">Select a course above to view students.</p>`;
+    currentStudentRoster = [];
+    return;
+  }
+
+  studentListContainer.innerHTML = `<p class="placeholder-text">Loading students...</p>`;
+  studentAttendanceMessage.textContent = "";
+
+  try {
+    // Find this lecturer's sessions for the selected course, then pull
+    // every check-in across those sessions to build a de-duplicated
+    // roster of students who've attended at least once.
+    const relevantSessions = lecturerSessions.filter((s) => s.courseName === courseName);
+
+    if (relevantSessions.length === 0) {
+      studentListContainer.innerHTML = `<p class="placeholder-text">No sessions have been held for this course yet.</p>`;
+      currentStudentRoster = [];
+      return;
+    }
+
+    const sessionIds = relevantSessions.map((s) => s.id);
+    const studentMap = new Map(); // key: matricNumber/uid, value: {name, matric, sessionsAttended}
+
+    const batches = [];
+    for (let i = 0; i < sessionIds.length; i += 30) {
+      batches.push(sessionIds.slice(i, i + 30));
+    }
+
+    for (const batch of batches) {
+      const checkInsQuery = query(
+        collection(db, "checkIns"),
+        where("sessionId", "in", batch)
+      );
+      const snapshot = await getDocs(checkInsQuery);
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const key = data.matricNumber || data.studentUid || docSnap.id;
+        if (!studentMap.has(key)) {
+          studentMap.set(key, {
+            name: data.studentName || "Unknown",
+            matric: data.matricNumber || "",
+            sessionsAttended: 0
+          });
+        }
+        studentMap.get(key).sessionsAttended++;
+      });
+    }
+
+    currentStudentRoster = Array.from(studentMap.values());
+    renderStudentRoster();
+
+  } catch (error) {
+    console.error("Error loading students for course:", error);
+    studentListContainer.innerHTML = `<p class="placeholder-text">Couldn't load students right now — check your connection and try again.</p>`;
+  }
+});
+
+function renderStudentRoster() {
+  const searchTerm = (studentSearchInput.value || "").trim().toLowerCase();
+
+  const filtered = currentStudentRoster.filter((student) => {
+    if (!searchTerm) return true;
+    const haystack = `${student.name} ${student.matric}`.toLowerCase();
+    return haystack.includes(searchTerm);
+  });
+
+  if (filtered.length === 0) {
+    studentListContainer.innerHTML = `<p class="placeholder-text">${currentStudentRoster.length === 0 ? "No students have checked in for this course yet." : "No students match your search."}</p>`;
+    return;
+  }
+
+  let tableHTML = `
+    <table class="attendee-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Matric Number</th>
+          <th>Sessions Attended</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  filtered.forEach((student) => {
+    tableHTML += `
+      <tr>
+        <td>${escapeHtmlLect(student.name)}</td>
+        <td>${escapeHtmlLect(student.matric)}</td>
+        <td>${student.sessionsAttended}</td>
+      </tr>
+    `;
+  });
+
+  tableHTML += `</tbody></table>`;
+  studentListContainer.innerHTML = tableHTML;
+}
+
+studentSearchInput.addEventListener("input", renderStudentRoster);
+
+
+// ==========================
+// ANALYTICS SECTION
+// ==========================
+async function loadAnalytics() {
+  if (!currentLecturer) return;
+
+  try {
+    // lecturerSessions is populated by loadSessionHistory/loadReportSessionOptions,
+    // both of which run earlier in the load sequence — but guard in case
+    // this fires first on a slow connection.
+    if (lecturerSessions.length === 0) {
+      await loadReportSessionOptions();
+    }
+
+    const totalSessions = lecturerSessions.length;
+    const totalPresent = lecturerSessions.reduce((sum, s) => sum + (s.checkInCount || 0), 0);
+
+    analyticsSessionsCount.textContent = totalSessions.toString();
+    analyticsPresentCount.textContent = totalPresent.toString();
+
+    // "Absent" is an estimate: for each session, we compare its
+    // check-in count against the best-attended session for the same
+    // course (a stand-in for expected class size, since we don't track
+    // enrollment). This is an estimate, not a hard count against a
+    // roster — labelled as such in the UI.
+    const byCourse = {};
+    lecturerSessions.forEach((s) => {
+      if (!byCourse[s.courseName]) byCourse[s.courseName] = [];
+      byCourse[s.courseName].push(s.checkInCount || 0);
+    });
+
+    let estimatedAbsent = 0;
+    Object.values(byCourse).forEach((counts) => {
+      const maxForCourse = Math.max(...counts, 0);
+      counts.forEach((c) => {
+        estimatedAbsent += Math.max(maxForCourse - c, 0);
+      });
+    });
+    analyticsAbsentCount.textContent = estimatedAbsent.toString();
+
+    // Trend: last 10 sessions, oldest to newest, as a simple bar list
+    const recentSessions = [...lecturerSessions]
+      .filter((s) => s.createdAt && s.createdAt.toDate)
+      .sort((a, b) => a.createdAt.toDate() - b.createdAt.toDate())
+      .slice(-10);
+
+    if (recentSessions.length === 0) {
+      attendanceTrendContainer.innerHTML = `<p class="placeholder-text">No session data yet to show a trend.</p>`;
+    } else {
+      const maxCount = Math.max(...recentSessions.map((s) => s.checkInCount || 0), 1);
+      let trendHtml = `<div style="display:flex; align-items:flex-end; gap:10px; height:140px; padding:10px 0;">`;
+      recentSessions.forEach((s) => {
+        const count = s.checkInCount || 0;
+        const heightPct = Math.max((count / maxCount) * 100, 4);
+        const dateLabel = s.createdAt.toDate().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        trendHtml += `
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+            <span style="font-size:0.75rem; color:var(--text-light);">${count}</span>
+            <div style="width:100%; max-width:34px; height:${heightPct}%; background:var(--primary); border-radius:4px 4px 0 0;" title="${escapeHtmlLect(s.courseName)} — ${dateLabel}"></div>
+            <span style="font-size:0.7rem; color:var(--text-light); writing-mode:vertical-rl; transform:rotate(180deg); height:50px;">${dateLabel}</span>
+          </div>
+        `;
+      });
+      trendHtml += `</div>`;
+      attendanceTrendContainer.innerHTML = trendHtml;
+    }
+
+    // Course comparison: total check-ins per course
+    const courseNames = Object.keys(byCourse);
+    if (courseNames.length === 0) {
+      courseComparisonContainer.innerHTML = `<p class="placeholder-text">No course data yet.</p>`;
+    } else {
+      let compHtml = "";
+      courseNames.forEach((courseName) => {
+        const counts = byCourse[courseName];
+        const total = counts.reduce((a, b) => a + b, 0);
+        const sessionsForCourse = counts.length;
+        compHtml += `
+          <div class="history-item">
+            <div class="history-item-info">
+              <h4>${escapeHtmlLect(courseName)}</h4>
+              <p>${sessionsForCourse} session${sessionsForCourse === 1 ? "" : "s"} · ${total} total check-ins</p>
+            </div>
+          </div>
+        `;
+      });
+      courseComparisonContainer.innerHTML = compHtml;
+    }
+
+  } catch (error) {
+    console.error("Error loading analytics:", error);
+    attendanceTrendContainer.innerHTML = `<p class="placeholder-text">Couldn't load analytics right now — check your connection and try refreshing.</p>`;
+    courseComparisonContainer.innerHTML = "";
+  }
+}
+
+
 const navItems = document.querySelectorAll(".nav-item");
 const sections = document.querySelectorAll(".dashboard-section");
 
