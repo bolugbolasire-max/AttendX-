@@ -484,7 +484,7 @@ async function loadCourseReportOptions() {
   }
 }
 
-courseReportSelect.addEventListener("change", () => {
+courseReportSelect.addEventListener("change", async () => {
   const courseName = courseReportSelect.value;
 
   if (!courseName) {
@@ -499,17 +499,39 @@ courseReportSelect.addEventListener("change", () => {
     return;
   }
 
+  courseReportContainer.innerHTML = `<p class="placeholder-text">Loading report...</p>`;
+
   const totalSessions = relevantSessions.length;
   const totalCheckIns = relevantSessions.reduce((sum, s) => sum + (s.checkInCount || 0), 0);
   const avgPerSession = Math.round(totalCheckIns / totalSessions);
-  const maxCheckIns = Math.max(...relevantSessions.map((s) => s.checkInCount || 0), 0);
-  const fillRate = maxCheckIns > 0 ? Math.round((avgPerSession / maxCheckIns) * 100) : 0;
+
+  let attendanceLine = "";
+  try {
+    const enrollQuery = query(
+      collection(db, "enrollments"),
+      where("schoolId", "==", currentLecturer.schoolId),
+      where("courseName", "==", courseName),
+      where("status", "==", "active")
+    );
+    const enrollSnap = await getDocs(enrollQuery);
+    const enrolledCount = enrollSnap.size;
+
+    if (enrolledCount > 0) {
+      const expected = enrolledCount * totalSessions;
+      const rate = Math.round((totalCheckIns / expected) * 100);
+      attendanceLine = ` · ${rate}% attendance (${enrolledCount} enrolled)`;
+    } else {
+      attendanceLine = " · No students enrolled yet";
+    }
+  } catch (error) {
+    console.error("Error loading enrollment count for course report:", error);
+  }
 
   courseReportContainer.innerHTML = `
     <div class="history-item">
       <div class="history-item-info">
         <h4>${totalSessions} session${totalSessions === 1 ? "" : "s"} held</h4>
-        <p>${totalCheckIns} total check-ins · ${avgPerSession} avg. per session · ${fillRate}% fill rate vs. best session</p>
+        <p>${totalCheckIns} total check-ins · ${avgPerSession} avg. per session${attendanceLine}</p>
       </div>
     </div>
   `;
@@ -724,7 +746,6 @@ async function loadSessionHistory() {
     let historyHTML = "";
 
     const todayStr = new Date().toDateString();
-    const checkInCounts = []; // used below to compute average session fill rate
 
     lecturerSessions = [];
 
@@ -736,7 +757,6 @@ async function loadSessionHistory() {
       sessionCount++;
       const thisCheckInCount = session.checkInCount || 0;
       totalCheckIns += thisCheckInCount;
-      checkInCounts.push(thisCheckInCount);
 
       if (session.active) activeCount++;
 
@@ -782,14 +802,11 @@ async function loadSessionHistory() {
     todaySessionsStatEl.textContent = todayCount.toString();
     activeSessionsStatEl.textContent = activeCount.toString();
 
-    // "Fill rate": average check-ins per session, relative to this
-    // lecturer's best-attended session. We don't have course enrollment
-    // data to compute a true attendance percentage against, so this is
-    // presented as a relative fill-rate rather than a hard attendance %.
-    const maxCheckIns = Math.max(...checkInCounts, 0);
-    const avgCheckIns = checkInCounts.reduce((a, b) => a + b, 0) / checkInCounts.length;
-    const fillRate = maxCheckIns > 0 ? Math.round((avgCheckIns / maxCheckIns) * 100) : 0;
-    attendancePercentStatEl.textContent = `${fillRate}%`;
+    // Real attendance percentage: total check-ins across this lecturer's
+    // sessions, divided by (enrolled students × sessions held), summed
+    // per course. This replaces the earlier "fill rate vs. best session"
+    // estimate now that enrollment data actually exists.
+    updateAttendancePercentStat();
 
     // Total unique students seen, across all this lecturer's sessions —
     // requires reading checkIns, so it's computed separately below
@@ -844,6 +861,53 @@ async function updateTotalStudentsStat() {
 
   } catch (error) {
     console.error("Error computing total students stat:", error);
+  }
+}
+
+// Real attendance percentage, using actual enrollment counts. For each
+// of this lecturer's courses: (check-ins for that course) ÷
+// (enrolled students × sessions held for that course). Summed across
+// all courses, then expressed as one overall percentage. Replaces the
+// earlier "fill rate vs. best session" estimate now that the
+// enrollments collection exists.
+async function updateAttendancePercentStat() {
+  if (!currentLecturer || lecturerSessions.length === 0) {
+    attendancePercentStatEl.textContent = "0%";
+    return;
+  }
+
+  try {
+    const courseNames = [...new Set(lecturerSessions.map((s) => s.courseName))];
+
+    let totalExpected = 0;
+    let totalPresent = 0;
+
+    for (const courseName of courseNames) {
+      const sessionsForCourse = lecturerSessions.filter((s) => s.courseName === courseName);
+      const sessionsHeld = sessionsForCourse.length;
+      const presentCount = sessionsForCourse.reduce((sum, s) => sum + (s.checkInCount || 0), 0);
+
+      const enrollQuery = query(
+        collection(db, "enrollments"),
+        where("schoolId", "==", currentLecturer.schoolId),
+        where("courseName", "==", courseName),
+        where("status", "==", "active")
+      );
+      const enrollSnap = await getDocs(enrollQuery);
+      const enrolledCount = enrollSnap.size;
+
+      if (enrolledCount > 0) {
+        totalExpected += enrolledCount * sessionsHeld;
+        totalPresent += presentCount;
+      }
+    }
+
+    const rate = totalExpected > 0 ? Math.round((totalPresent / totalExpected) * 100) : 0;
+    attendancePercentStatEl.textContent = totalExpected > 0 ? `${rate}%` : "No enrollment data";
+
+  } catch (error) {
+    console.error("Error computing attendance percentage:", error);
+    attendancePercentStatEl.textContent = "0%";
   }
 }
 
