@@ -378,9 +378,24 @@
   ConversationContext.prototype.looksLikeFollowUp = function (userText) {
     const tokens = tokenize(userText);
     const normalized = normalize(userText);
-    const isShort = tokens.length <= 4;
+
+    // Explicit connector/ellipsis phrasing is always a strong signal
+    // regardless of length ("what about lecturers", "and how do I do
+    // that for students").
     const startsWithConnector = /^(and|what about|what of|also|how about|and what about|that|it|those|then)\b/.test(normalized);
-    return this.turns.length > 0 && (isShort || startsWithConnector);
+    if (startsWithConnector) return this.turns.length > 0;
+
+    // Otherwise, only treat it as a follow-up if it's a BARE fragment —
+    // 1-2 tokens with no question word of its own (e.g. "gps?", "face
+    // verification"). A question that has its own question word
+    // ("how", "what", "is", "can", "do") or is 3+ tokens is a
+    // self-contained question and must be scored fresh, not blended
+    // with the previous topic — otherwise a new topic like "how can I
+    // register" incorrectly inherits the prior "pricing" context.
+    const hasOwnQuestionWord = /^(how|what|when|where|why|who|is|are|do|does|can|could|will|would|should)\b/.test(normalized);
+    const isBareFragment = tokens.length <= 2 && !hasOwnQuestionWord;
+
+    return this.turns.length > 0 && isBareFragment;
   };
 
   // Merges the current short follow-up with the previous turn's topic
