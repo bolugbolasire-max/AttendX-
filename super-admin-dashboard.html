@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="ai-chat-widget.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -32,8 +33,15 @@
       </div>
 
       <nav class="sidebar-nav">
-        <a href="#" class="nav-item active" data-section="overview">📊 Overview</a>
+        <a href="#" class="nav-item active" data-section="overview">🏠 Dashboard</a>
         <a href="#" class="nav-item" data-section="schools">🏫 Schools</a>
+        <a href="#" class="nav-item" data-section="schooladmins">👨‍💼 School Admins</a>
+        <a href="#" class="nav-item" data-section="lecturers">👨‍🏫 Lecturers</a>
+        <a href="#" class="nav-item" data-section="students">🎓 Students</a>
+        <a href="#" class="nav-item" data-section="courses">📚 Courses</a>
+        <a href="#" class="nav-item" data-section="attendance">📍 Attendance</a>
+        <a href="#" class="nav-item" data-section="analytics">📊 Analytics</a>
+        <a href="#" class="nav-item" data-section="security">🔐 Security</a>
       </nav>
 
       <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
@@ -50,37 +58,69 @@
         </div>
       </header>
 
-      <!-- OVERVIEW -->
+      <!-- ============================================================
+           OVERVIEW
+      ============================================================= -->
       <section id="overview" class="dashboard-section active">
-        <h2>Overview</h2>
+        <h2>Platform Overview</h2>
         <div class="stat-cards">
           <div class="stat-card">
             <div class="stat-card-icon">🏫</div>
             <div class="stat-card-body">
-              <h3 id="schoolCount">0</h3>
-              <p>Schools</p>
+              <h3 id="ovSchoolCount">0</h3>
+              <p>Total Schools</p>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-card-icon green">✅</div>
+            <div class="stat-card-icon amber">👨‍💼</div>
             <div class="stat-card-body">
-              <h3 id="activeSchoolCount">0</h3>
-              <p>Active Schools</p>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-icon amber">👤</div>
-            <div class="stat-card-body">
-              <h3 id="adminCount">0</h3>
+              <h3 id="ovAdminCount">0</h3>
               <p>School Admins</p>
             </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">👨‍🏫</div>
+            <div class="stat-card-body">
+              <h3 id="ovLecturerCount">0</h3>
+              <p>Lecturers</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon rose">🎓</div>
+            <div class="stat-card-body">
+              <h3 id="ovStudentCount">0</h3>
+              <p>Students</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">📚</div>
+            <div class="stat-card-body">
+              <h3 id="ovCourseCount">0</h3>
+              <p>Total Courses</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">📍</div>
+            <div class="stat-card-body">
+              <h3 id="ovSessionCount">0</h3>
+              <p>Attendance Sessions</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width:100%; margin-top:24px;">
+          <h3>🏫 Recently Added Schools</h3>
+          <div id="ovRecentSchools" class="session-history-list">
+            <p class="placeholder-text">Loading...</p>
           </div>
         </div>
       </section>
 
-      <!-- SCHOOLS -->
+      <!-- ============================================================
+           SCHOOLS
+      ============================================================= -->
       <section id="schools" class="dashboard-section">
-        <h2>Schools</h2>
+        <h2>School Management</h2>
 
         <div class="session-card">
           <h3>➕ Add New School</h3>
@@ -103,6 +143,26 @@
 
           <button id="addSchoolBtn" type="button">Add School</button>
         </div>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>📋 All Schools</h3>
+
+          <div class="form-group" style="max-width:340px;">
+            <input type="text" id="schoolSearchInput" placeholder="Search schools by name...">
+          </div>
+
+          <div id="schoolsList" class="session-history-list">
+            <p class="placeholder-text">Loading schools...</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           SCHOOL ADMINS
+      ============================================================= -->
+      <section id="schooladmins" class="dashboard-section">
+        <h2>School Admin Management</h2>
 
         <div class="session-card">
           <h3>👤 Create School Admin</h3>
@@ -134,13 +194,179 @@
           <button id="createAdminBtn" type="button">Create School Admin</button>
         </div>
 
-        <div class="session-card">
-          <h3>📋 All Schools</h3>
-          <div id="schoolsList" class="session-history-list">
-            <p class="placeholder-text">Loading schools...</p>
+        <div class="session-card" style="max-width:100%;">
+          <h3>📋 All School Admins</h3>
+
+          <div class="form-group" style="max-width:340px;">
+            <input type="text" id="adminSearchInput" placeholder="Search admins by name or email...">
+          </div>
+
+          <div id="adminsList" class="session-history-list">
+            <p class="placeholder-text">Loading admins...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           LECTURERS
+      ============================================================= -->
+      <section id="lecturers" class="dashboard-section">
+        <h2>Lecturer Monitoring</h2>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>👨‍🏫 All Lecturers</h3>
+
+          <div class="form-group" style="max-width:340px;">
+            <input type="text" id="lecturerSearchInput" placeholder="Search lecturers by name, email or school...">
+          </div>
+
+          <div id="lecturersList" class="session-history-list">
+            <p class="placeholder-text">Loading lecturers...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           STUDENTS
+      ============================================================= -->
+      <section id="students" class="dashboard-section">
+        <h2>Student Monitoring</h2>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>🎓 All Students</h3>
+
+          <div class="form-group" style="max-width:340px;">
+            <input type="text" id="studentSearchInput" placeholder="Search students by name, matric no. or school...">
+          </div>
+
+          <div id="studentsList" class="session-history-list">
+            <p class="placeholder-text">Loading students...</p>
           </div>
         </div>
 
+        <div class="session-card" style="max-width:100%;">
+          <h3>📍 Attendance Records for Selected Student</h3>
+          <p class="request-hint" id="studentAttendanceHint">Click "View Attendance" next to a student above.</p>
+          <div id="studentAttendanceRecords" class="session-history-list"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           COURSES
+      ============================================================= -->
+      <section id="courses" class="dashboard-section">
+        <h2>Course Monitoring</h2>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>📚 All Courses</h3>
+
+          <div class="form-group" style="max-width:340px;">
+            <input type="text" id="courseSearchInput" placeholder="Search courses by name, code or school...">
+          </div>
+
+          <div id="coursesList" class="session-history-list">
+            <p class="placeholder-text">Loading courses...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           ATTENDANCE
+      ============================================================= -->
+      <section id="attendance" class="dashboard-section">
+        <h2>Attendance Monitoring</h2>
+
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon">📍</div>
+            <div class="stat-card-body">
+              <h3 id="attTotalSessions">0</h3>
+              <p>Total Sessions</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">✅</div>
+            <div class="stat-card-body">
+              <h3 id="attTodaySessions">0</h3>
+              <p>Sessions Today</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon amber">📊</div>
+            <div class="stat-card-body">
+              <h3 id="attOverallPercent">0%</h3>
+              <p>Overall Attendance</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width:100%; margin-top:24px;">
+          <h3>🕒 Recent Attendance Sessions</h3>
+          <div id="attRecentList" class="session-history-list">
+            <p class="placeholder-text">Loading...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           ANALYTICS
+      ============================================================= -->
+      <section id="analytics" class="dashboard-section">
+        <h2>Analytics</h2>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>🏫 School Growth (schools added over time)</h3>
+          <canvas id="schoolGrowthChart" height="90"></canvas>
+        </div>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>📍 Attendance Trend (sessions per day, last 14 days)</h3>
+          <canvas id="attendanceTrendChart" height="90"></canvas>
+        </div>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>👥 User Registration Breakdown</h3>
+          <canvas id="userBreakdownChart" height="120"></canvas>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           SECURITY
+      ============================================================= -->
+      <section id="security" class="dashboard-section">
+        <h2>Security Controls</h2>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>🚫 Blocked / Disabled Accounts</h3>
+          <p class="request-hint">Accounts disabled across School Admins, Lecturers and Students.</p>
+          <div id="blockedAccountsList" class="session-history-list">
+            <p class="placeholder-text">Loading...</p>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>⚠️ Suspicious Activity</h3>
+          <p class="request-hint">Flags schools with unusually high attendance-session volume in the last 24 hours — a common sign of misuse. This is a heuristic, not a guarantee.</p>
+          <div id="suspiciousActivityList" class="session-history-list">
+            <p class="placeholder-text">Loading...</p>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>🔒 Force Logout a User</h3>
+          <p class="request-hint">
+            Marks the account as disabled, which blocks their next login attempt.
+            This does not immediately kill an already-open browser session on their device —
+            Firebase Auth has no built-in "kill session now" for client SDKs — but it will stop them
+            from logging back in, and your app's own auth guard checks account status on every page load.
+          </p>
+          <div class="form-group" style="max-width:400px;">
+            <label for="forceLogoutEmailInput">User email</label>
+            <input type="email" id="forceLogoutEmailInput" placeholder="user@school.edu">
+          </div>
+          <div id="forceLogoutMessage" class="form-message"></div>
+          <button id="forceLogoutBtn" type="button" style="max-width:400px;">Disable &amp; Force Logout</button>
+        </div>
       </section>
 
     </main>
