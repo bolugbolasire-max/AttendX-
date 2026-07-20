@@ -93,6 +93,20 @@ registerForm.addEventListener("submit", async (e) => {
     return;
   }
 
+  // Require the reCAPTCHA checkbox to be completed before attempting
+  // account creation. This is a frontend-only check (no server-side
+  // secret-key verification, since AttendX has no backend) — it stops
+  // casual bots and scripted mass-signups, but isn't a guarantee
+  // against a determined attacker inspecting the client code. Checked
+  // last among the validation guards so a student filling the form out
+  // normally sees field-specific errors first, and only sees the
+  // reCAPTCHA prompt once everything else is actually filled in.
+  const recaptchaResponse = grecaptcha.getResponse();
+  if (!recaptchaResponse) {
+    showMessage("Please complete the reCAPTCHA before submitting.", "error");
+    return;
+  }
+
   registerBtn.disabled = true;
   registerBtn.textContent = "Creating account...";
 
@@ -151,6 +165,7 @@ registerForm.addEventListener("submit", async (e) => {
       showMessage("Something went wrong. Please try again.", "error");
     }
 
+    grecaptcha.reset();
     registerBtn.disabled = false;
     registerBtn.textContent = "Create Account";
   }

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="auth.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="ai-chat-widget.css">
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 
 <body>
@@ -31,6 +32,10 @@
         <div class="form-group">
           <label for="password">Password</label>
           <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+
+        <div class="form-group">
+          <div class="g-recaptcha" data-sitekey="6LfMfFwtAAAAAGMQDPGAtikUCqqi4HZAB1DC02r1"></div>
         </div>
 
         <div id="formMessage" class="form-message"></div>

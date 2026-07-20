@@ -20,6 +20,17 @@ function showMessage(text, type) {
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  // Require the reCAPTCHA checkbox to be completed before attempting
+  // sign-in. This is a frontend-only check (no server-side secret-key
+  // verification, since AttendX has no backend) — it stops casual bots
+  // and scripted submissions, but isn't a guarantee against a
+  // determined attacker inspecting the client code.
+  const recaptchaResponse = grecaptcha.getResponse();
+  if (!recaptchaResponse) {
+    showMessage("Please complete the reCAPTCHA before logging in.", "error");
+    return;
+  }
+
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
@@ -36,6 +47,7 @@ loginForm.addEventListener("submit", async (e) => {
 
     if (!userDocSnap.exists()) {
       showMessage("No profile found for this account.", "error");
+      grecaptcha.reset();
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
@@ -45,6 +57,7 @@ loginForm.addEventListener("submit", async (e) => {
 
     if (userData.role !== "superadmin") {
       showMessage("This account is not authorized as Super Admin.", "error");
+      grecaptcha.reset();
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
@@ -71,6 +84,7 @@ loginForm.addEventListener("submit", async (e) => {
       showMessage("Something went wrong. Please try again.", "error");
     }
 
+    grecaptcha.reset();
     loginBtn.disabled = false;
     loginBtn.textContent = "Login";
   }

@@ -21,6 +21,17 @@ function showMessage(text, type) {
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  // Require the reCAPTCHA checkbox to be completed before attempting
+  // sign-in. This is a frontend-only check (no server-side secret-key
+  // verification, since AttendX has no backend) — it stops casual bots
+  // and scripted submissions, but isn't a guarantee against a
+  // determined attacker inspecting the client code.
+  const recaptchaResponse = grecaptcha.getResponse();
+  if (!recaptchaResponse) {
+    showMessage("Please complete the reCAPTCHA before logging in.", "error");
+    return;
+  }
+
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
@@ -37,6 +48,7 @@ loginForm.addEventListener("submit", async (e) => {
 
     if (!userDocSnap.exists()) {
       showMessage("No profile found for this account. Contact your school admin.", "error");
+      grecaptcha.reset();
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
@@ -46,6 +58,7 @@ loginForm.addEventListener("submit", async (e) => {
 
     if (userData.role !== "lecturer") {
       showMessage("This account is not registered as a lecturer.", "error");
+      grecaptcha.reset();
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
@@ -57,6 +70,7 @@ loginForm.addEventListener("submit", async (e) => {
     if (userData.status === "disabled") {
       await signOut(auth);
       showMessage("Your account has been disabled. Please contact your School Admin.", "error");
+      grecaptcha.reset();
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
@@ -65,6 +79,7 @@ loginForm.addEventListener("submit", async (e) => {
     if (userData.status === "deleted") {
       await signOut(auth);
       showMessage("This account is no longer active. Please contact your School Admin.", "error");
+      grecaptcha.reset();
       loginBtn.disabled = false;
       loginBtn.textContent = "Login";
       return;
@@ -78,6 +93,7 @@ loginForm.addEventListener("submit", async (e) => {
       if (schoolDocSnap.exists() && schoolDocSnap.data().status === "suspended") {
         await signOut(auth);
         showMessage("Your school's access has been suspended. Please contact your School Admin.", "error");
+        grecaptcha.reset();
         loginBtn.disabled = false;
         loginBtn.textContent = "Login";
         return;
@@ -105,6 +121,7 @@ loginForm.addEventListener("submit", async (e) => {
       showMessage("Something went wrong. Please try again.", "error");
     }
 
+    grecaptcha.reset();
     loginBtn.disabled = false;
     loginBtn.textContent = "Login";
   }
