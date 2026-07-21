@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="ai-chat-widget.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     /* ==========================
        LECTURER MANAGEMENT ADDITIONS
@@ -225,6 +226,8 @@
         <a href="#" class="nav-item active" data-section="overview">📊 Overview</a>
         <a href="#" class="nav-item" data-section="lecturers">👨‍🏫 Lecturers</a>
         <a href="#" class="nav-item" data-section="courses">📚 Courses</a>
+        <a href="#" class="nav-item" data-section="attendance">📍 Attendance</a>
+        <a href="#" class="nav-item" data-section="analytics">📈 Analytics</a>
       </nav>
 
       <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
@@ -434,6 +437,62 @@
           </div>
         </div>
 
+      </section>
+
+      <!-- ATTENDANCE -->
+      <section id="attendance" class="dashboard-section">
+        <h2>Attendance Monitoring</h2>
+
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card-icon">📍</div>
+            <div class="stat-card-body">
+              <h3 id="attTotalSessions">0</h3>
+              <p>Total Sessions</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon green">✅</div>
+            <div class="stat-card-body">
+              <h3 id="attTodaySessions">0</h3>
+              <p>Sessions Today</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon amber">📊</div>
+            <div class="stat-card-body">
+              <h3 id="attOverallPercent">0%</h3>
+              <p>Overall Attendance</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-card" style="max-width:100%; margin-top:24px;">
+          <h3>🕒 Recent Attendance Sessions</h3>
+          <div id="attRecentList" class="session-history-list">
+            <p class="placeholder-text">Loading...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ANALYTICS -->
+      <section id="analytics" class="dashboard-section">
+        <h2>Analytics</h2>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>📍 Attendance Trend (sessions per day, last 14 days)</h3>
+          <canvas id="attendanceTrendChart" height="90"></canvas>
+        </div>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>👨‍🏫 Sessions per Lecturer</h3>
+          <canvas id="lecturerSessionsChart" height="90"></canvas>
+        </div>
+
+        <div class="session-card" style="max-width:100%;">
+          <h3>📚 Course Request Status</h3>
+          <canvas id="courseRequestChart" height="120"></canvas>
+        </div>
       </section>
 
     </main>

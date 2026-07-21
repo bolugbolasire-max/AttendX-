@@ -45,6 +45,12 @@ const courseCountEl = document.getElementById("courseCount");
 const sessionCountEl = document.getElementById("sessionCount");
 const pendingRequestCountEl = document.getElementById("pendingRequestCount");
 
+// Attendance
+const attTotalSessions = document.getElementById("attTotalSessions");
+const attTodaySessions = document.getElementById("attTodaySessions");
+const attOverallPercent = document.getElementById("attOverallPercent");
+const attRecentList = document.getElementById("attRecentList");
+
 // Lecturer elements
 const lecturerFullName = document.getElementById("lecturerFullName");
 const lecturerEmail = document.getElementById("lecturerEmail");
@@ -1233,11 +1239,233 @@ async function handleCourseRequest(requestId, decision) {
   }
 }
 
+// ============================================================
+// ATTENDANCE (this school only)
+// ============================================================
+let allSessionsForSchool = [];
+
+async function loadAttendanceSection() {
+  attRecentList.innerHTML = `<p class="placeholder-text">Loading...</p>`;
+
+  try {
+    const sessionsQuery = query(
+      collection(db, "sessions"),
+      where("schoolId", "==", currentAdmin.schoolId)
+    );
+    const sessionsSnap = await getDocs(sessionsQuery);
+
+    allSessionsForSchool = [];
+    sessionsSnap.forEach((d) => allSessionsForSchool.push({ id: d.id, ...d.data() }));
+
+    attTotalSessions.textContent = allSessionsForSchool.length.toString();
+
+    const todayStr = new Date().toDateString();
+    const todaySessions = allSessionsForSchool.filter((s) => {
+      const d = s.createdAt && s.createdAt.toDate ? s.createdAt.toDate() : null;
+      return d && d.toDateString() === todayStr;
+    });
+    attTodaySessions.textContent = todaySessions.length.toString();
+
+    // Overall attendance %: sum of checkInCount across all sessions,
+    // compared against enrolled students × sessions held, per course.
+    let totalExpected = 0;
+    let totalPresent = 0;
+
+    const byCourse = {};
+    allSessionsForSchool.forEach((s) => {
+      const key = s.courseName || "Unknown";
+      if (!byCourse[key]) byCourse[key] = [];
+      byCourse[key].push(s);
+    });
+
+    const courseNames = Object.keys(byCourse);
+    for (const courseName of courseNames) {
+      const sessionsForCourse = byCourse[courseName];
+      const presentCount = sessionsForCourse.reduce((sum, s) => sum + (s.checkInCount || 0), 0);
+      totalPresent += presentCount;
+
+      try {
+        const enrollQuery = query(
+          collection(db, "enrollments"),
+          where("schoolId", "==", currentAdmin.schoolId),
+          where("courseName", "==", courseName),
+          where("status", "==", "active")
+        );
+        const enrollSnap = await getDocs(enrollQuery);
+        totalExpected += enrollSnap.size * sessionsForCourse.length;
+      } catch (error) {
+        // If enrollments can't be read for some reason, skip this
+        // course's contribution rather than showing a misleading %.
+      }
+    }
+
+    attOverallPercent.textContent = totalExpected > 0
+      ? `${Math.round((totalPresent / totalExpected) * 100)}%`
+      : "N/A";
+
+    // Recent sessions list (most recent 20)
+    const recent = [...allSessionsForSchool]
+      .filter((s) => s.createdAt && s.createdAt.toDate)
+      .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate())
+      .slice(0, 20);
+
+    if (recent.length === 0) {
+      attRecentList.innerHTML = `<p class="placeholder-text">No attendance sessions recorded yet.</p>`;
+    } else {
+      attRecentList.innerHTML = recent.map((s) => {
+        const timeText = s.createdAt.toDate().toLocaleString();
+        const statusLabel = s.active ? "🟢 Active" : "Ended";
+        const statusClass = s.active ? "active" : "ended";
+        return `
+          <div class="history-item">
+            <div class="history-item-info">
+              <h4>${escapeHtml(s.courseName || "Unknown course")}</h4>
+              <p>${escapeHtml(s.lecturerName || "Unknown lecturer")} · ${s.checkInCount || 0} present · ${timeText}</p>
+            </div>
+            <span class="history-badge ${statusClass}">${statusLabel}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+  } catch (error) {
+    console.error("Error loading attendance section:", error);
+    attRecentList.innerHTML = `<p class="placeholder-text">Couldn't load attendance data right now.</p>`;
+  }
+}
+
+// ============================================================
+// ANALYTICS (this school only)
+// ============================================================
+let chartsInitialized = false;
+
+async function initAnalyticsCharts() {
+  if (chartsInitialized) return;
+  if (typeof Chart === "undefined") {
+    console.error("Chart.js failed to load — check your network connection.");
+    return;
+  }
+  chartsInitialized = true;
+
+  const isDark = document.body.classList.contains("dark");
+  const gridColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const textColor = isDark ? "#b3b6cc" : "#5a5a72";
+
+  // Make sure we have fresh session data (Attendance tab may not have
+  // been opened yet this visit).
+  if (allSessionsForSchool.length === 0) {
+    try {
+      const sessionsQuery = query(
+        collection(db, "sessions"),
+        where("schoolId", "==", currentAdmin.schoolId)
+      );
+      const sessionsSnap = await getDocs(sessionsQuery);
+      sessionsSnap.forEach((d) => allSessionsForSchool.push({ id: d.id, ...d.data() }));
+    } catch (error) {
+      console.error("Error loading sessions for analytics:", error);
+    }
+  }
+
+  // ---- Attendance trend: sessions per day, last 14 days ----
+  const now = new Date();
+  const dayBuckets = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    dayBuckets.push({ label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), dateStr: d.toDateString(), count: 0 });
+  }
+  allSessionsForSchool.forEach((s) => {
+    if (!s.createdAt || !s.createdAt.toDate) return;
+    const dateStr = s.createdAt.toDate().toDateString();
+    const bucket = dayBuckets.find((b) => b.dateStr === dateStr);
+    if (bucket) bucket.count++;
+  });
+
+  new Chart(document.getElementById("attendanceTrendChart"), {
+    type: "bar",
+    data: {
+      labels: dayBuckets.map((b) => b.label),
+      datasets: [{
+        label: "Sessions",
+        data: dayBuckets.map((b) => b.count),
+        backgroundColor: "#16a34a"
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: textColor } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 }, beginAtZero: true }
+      }
+    }
+  });
+
+  // ---- Sessions per lecturer ----
+  const byLecturer = {};
+  allSessionsForSchool.forEach((s) => {
+    const name = s.lecturerName || "Unknown";
+    byLecturer[name] = (byLecturer[name] || 0) + 1;
+  });
+  const lecturerNames = Object.keys(byLecturer).sort((a, b) => byLecturer[b] - byLecturer[a]).slice(0, 10);
+
+  new Chart(document.getElementById("lecturerSessionsChart"), {
+    type: "bar",
+    data: {
+      labels: lecturerNames,
+      datasets: [{
+        label: "Sessions held",
+        data: lecturerNames.map((n) => byLecturer[n]),
+        backgroundColor: "#2f6fed"
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 }, beginAtZero: true },
+        y: { grid: { display: false }, ticks: { color: textColor } }
+      }
+    }
+  });
+
+  // ---- Course request status breakdown ----
+  let approvedCount = 0, pendingCount = 0, rejectedCount = 0;
+  try {
+    const requestsQuery = query(
+      collection(db, "courseRequests"),
+      where("schoolId", "==", currentAdmin.schoolId)
+    );
+    const requestsSnap = await getDocs(requestsQuery);
+    requestsSnap.forEach((d) => {
+      const status = d.data().status;
+      if (status === "approved") approvedCount++;
+      else if (status === "rejected") rejectedCount++;
+      else pendingCount++;
+    });
+  } catch (error) {
+    console.error("Error loading course requests for analytics:", error);
+  }
+
+  new Chart(document.getElementById("courseRequestChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Approved", "Pending", "Rejected"],
+      datasets: [{
+        data: [approvedCount, pendingCount, rejectedCount],
+        backgroundColor: ["#16a34a", "#ca8a04", "#e11d48"]
+      }]
+    },
+    options: {
+      plugins: { legend: { position: "bottom", labels: { color: textColor } } }
+    }
+  });
+}
+
 // ==========================
 // SIDEBAR TAB SWITCHING
 // ==========================
 const navItems = document.querySelectorAll(".nav-item");
 const sections = document.querySelectorAll(".dashboard-section");
+const sectionsAlreadyLoaded = new Set(["overview"]);
 
 navItems.forEach((item) => {
   item.addEventListener("click", (e) => {
@@ -1250,5 +1478,11 @@ navItems.forEach((item) => {
     sections.forEach((section) => {
       section.classList.toggle("active", section.id === targetSection);
     });
+
+    if (!sectionsAlreadyLoaded.has(targetSection)) {
+      sectionsAlreadyLoaded.add(targetSection);
+      if (targetSection === "attendance") loadAttendanceSection();
+      if (targetSection === "analytics") initAnalyticsCharts();
+    }
   });
 });
