@@ -157,6 +157,16 @@ onAuthStateChanged(auth, async (user) => {
 
     const userData = userDocSnap.data();
 
+    // A Super Admin can disable an individual account (separate from
+    // suspending the whole school). Block them here before anything
+    // else loads — being signed in to Firebase Auth is not the same
+    // as being allowed to use the dashboard.
+    if (userData.status === "disabled") {
+      await signOut(auth);
+      window.location.href = "account-disabled.html";
+      return;
+    }
+
     // Check the school's status BEFORE rendering anything. Previously
     // this was only checked via a live listener started after the
     // dashboard had already rendered and begun loading data — a student
@@ -237,6 +247,18 @@ onAuthStateChanged(auth, async (user) => {
         }
       });
     }
+
+    // Live-watch this student's own account. If a Super Admin disables
+    // this account (or "force logs out" a user, which does the same
+    // thing) while they're actively using the dashboard, this signs
+    // them out immediately instead of waiting for their next login.
+    onSnapshot(doc(db, "users", user.uid), (userSnap) => {
+      if (userSnap.exists() && userSnap.data().status === "disabled") {
+        signOut(auth).then(() => {
+          window.location.href = "account-disabled.html";
+        });
+      }
+    });
 
   } catch (error) {
     console.error("Error loading dashboard:", error);

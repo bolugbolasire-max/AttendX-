@@ -129,6 +129,16 @@ onAuthStateChanged(auth, async (user) => {
 
     const userData = userDocSnap.data();
 
+    // A Super Admin can disable an individual account (separate from
+    // suspending the whole school). Block them here before anything
+    // else loads — being signed in to Firebase Auth is not the same
+    // as being allowed to use the dashboard.
+    if (userData.status === "disabled") {
+      await signOut(auth);
+      window.location.href = "account-disabled.html";
+      return;
+    }
+
     if (!userData.schoolId) {
       // Lecturer accounts should always be created by a School Admin, which
       // stamps schoolId onto the profile. If it's missing, something's off.
@@ -183,6 +193,18 @@ onAuthStateChanged(auth, async (user) => {
       if (schoolSnap.exists() && schoolSnap.data().status === "suspended") {
         signOut(auth).then(() => {
           window.location.href = "school-suspended.html";
+        });
+      }
+    });
+
+    // Live-watch this lecturer's own account. If a Super Admin disables
+    // this account (or "force logs out" a user, which does the same
+    // thing) while they're actively using the dashboard, this signs
+    // them out immediately instead of waiting for their next login.
+    onSnapshot(doc(db, "users", user.uid), (userSnap) => {
+      if (userSnap.exists() && userSnap.data().status === "disabled") {
+        signOut(auth).then(() => {
+          window.location.href = "account-disabled.html";
         });
       }
     });
