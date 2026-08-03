@@ -1,14 +1,14 @@
-# AttendX — robots.txt
-# https://attendx00.netlify.app
-
 User-agent: *
 Allow: /
 
-# Dashboards require login and hold user-specific data — no reason for
-# search engines to crawl or index them, and doing so wastes crawl budget.
-Disallow: /student-dashboard.html
-Disallow: /lecturer-dashboard.html
-Disallow: /school-admin-dashboard.html
+# Keep private/authenticated areas out of search results — there's
+# nothing useful for a searcher to find behind a login, and keeping
+# them out of the index avoids sensitive pages showing up in Google
+# search previews.
 Disallow: /super-admin-dashboard.html
+Disallow: /school-admin-dashboard.html
+Disallow: /lecturer-dashboard.html
+Disallow: /student-dashboard.html
+Disallow: /account-disabled.html
 
 Sitemap: https://attendx00.netlify.app/sitemap.xml
