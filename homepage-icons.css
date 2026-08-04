@@ -1,0 +1,62 @@
+/* ==========================
+   HOMEPAGE ICONS
+   Line-style SVG icons replacing the emoji that used to sit in
+   feature/benefit headings. Icons inherit color from their wrapper,
+   so they follow --primary and dark mode automatically — no separate
+   icon-color rules to maintain.
+========================== */
+.card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(47, 111, 237, 0.1);
+  color: var(--primary);
+  margin-bottom: 14px;
+}
+
+.card-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The card heading no longer needs to share a line with an icon glyph,
+   so it sits cleanly below the icon chip instead of beside it. */
+.card h3 {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+/* ==========================
+   SCROLL REVEAL
+   One quiet, consistent entrance for card content as it comes into
+   view — not scattered per-element effects. Respects users who've
+   asked their system to reduce motion.
+========================== */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
